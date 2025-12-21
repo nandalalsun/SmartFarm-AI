@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Customers from './pages/Customers';
 import Products from './pages/Products';
+import NewSale from './pages/NewSale';
+import Dashboard from './pages/Dashboard';
 
 function Home() {
   return (
@@ -33,6 +35,8 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/sales/new" element={<NewSale />} />
+          <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </div>
     </BrowserRouter>

@@ -27,10 +27,15 @@ This diagram defines how your farm data is structured.
 erDiagram
     CUSTOMER ||--o{ SALE : "places"
     CUSTOMER ||--o{ CREDIT_LEDGER : "has history of"
-    PRODUCT ||--o{ SALE : "included in"
+    CUSTOMER ||--o{ PAYMENT_TRANSACTION : "makes"
+    
+    PRODUCT ||--o{ SALE_ITEM : "included in"
     PRODUCT ||--o{ PURCHASE : "restocked by"
-    SALE ||--|| BILL_IMAGE : "documented by"
-    SALE ||--o| CREDIT_LEDGER : "generates"
+    
+    SALE ||--|{ SALE_ITEM : "contains"
+    SALE ||--o{ PAYMENT_TRANSACTION : "paid via"
+    SALE ||--o| CREDIT_LEDGER : "generates debt"
+    SALE ||--o| BILL_IMAGE : "documented by"
     
     CUSTOMER {
         uuid id PK
@@ -50,34 +55,54 @@ erDiagram
         string category "FEED / MEDICINE / LIVE_CHICK / MEAT / EGGS"
         decimal cost_price "What you paid"
         decimal selling_price "Standard price"
-        string unit "KG / BAG / PIECE"
+        string unit "KG / BAG / TRAY / PIECE"
         int current_stock
     }
 
     SALE {
         uuid id PK
         uuid customer_id FK
-        decimal total_amount
-        string payment_type "CASH / CREDIT"
+        decimal total_bill_amount
+        decimal initial_paid_amount
+        decimal remaining_balance
+        string payment_status "FULLY_PAID / PARTIAL / UNPAID"
         string sale_channel "POS / WHATSAPP / FIELD"
         timestamp created_at
+    }
+
+    SALE_ITEM {
+        uuid id PK
+        uuid sale_id FK
+        uuid product_id FK
+        int quantity
+        decimal unit_price "Price at time of sale"
+        decimal line_total
+    }
+
+    PAYMENT_TRANSACTION {
+        uuid id PK
+        uuid sale_id FK
+        uuid customer_id FK
+        decimal amount_paid
+        string payment_method "CASH / CHECK / TRANSFER"
+        timestamp payment_date
     }
 
     CREDIT_LEDGER {
         uuid id PK
         uuid customer_id FK
         uuid sale_id FK
-        decimal credit_amount
-        decimal amount_paid
-        decimal remaining_balance
+        decimal original_debt
+        decimal current_balance
         timestamp due_date
-        string status "PAID / PARTIAL / OVERDUE"
-        string remarks "Notes on payment"
+        string status "ACTIVE / CLEARED"
+        string remarks
     }
 
     PURCHASE {
         uuid id PK
         uuid product_id FK
+        string supplier_name
         int quantity
         decimal total_cost
         timestamp purchase_date
@@ -87,7 +112,8 @@ erDiagram
         uuid id PK
         uuid sale_id FK
         string s3_url
-        json extracted_data
+        json extracted_json "AI output stored here"
+        timestamp uploaded_at
     }
 ```
 
@@ -119,14 +145,9 @@ graph TD
 
 
 ## 6. Future AI Context Summary
+**Copy and paste this paragraph the next time you start a chat with an AI to resume work:**
 
-> "I am building **FarmSmart AI**, a poultry farm ERP. 
-> **Architecture:** Java (Spring Boot), React, PostgreSQL (pgvector), hosted on AWS with a self-hosted Ollama (Llama 3).
-> **Data Model:** 
-> - **Customers** are categorized as **Farmers** (buying chicks/feed/medicine), **Butchers** (buying meat/eggs), or **Retail** (cash only). 
-> - **Inventory** tracks different categories (Feed, Medicine, Live Stock, Meat).
-> - **Credit Ledger** tracks debt history and partial payments, linked to customers and specific sales.
-> **AI Features:** 
-> 1. **Vision:** Extracting sales data from photos of bills. 
-> 2. **RAG:** Answering business questions about profit, expected sales, and customer credit status.
-> I have the ERD (v3) ready. Please help me with implementation steps."
+> "I am building **FarmSmart AI**, a poultry farm billing and ERP app. **Tech Stack:** Java (Spring Boot), React, and PostgreSQL with pgvector. **Hosting:** AWS (Amplify, RDS, EC2 with GPU). **Key Features:** Credit/Cash sales management, inventory tracking, and profit analysis. It uses a **self-hosted LLM (Ollama/Llama 3)** for two main AI features: 
+> 1. **RAG/Text-to-SQL** for 'Smart Business Ask' (e.g., forecasting sales, querying credit totals). 
+> 2. **Multimodal Vision** for extracting sales details from photos of physical bills. 
+> I have the ERD and Infrastructure plan ready. Please help me with the next step of the implementation."

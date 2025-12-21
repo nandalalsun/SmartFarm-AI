@@ -1,0 +1,29 @@
+package com.farmsmart.backend.entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Entity
+@Data
+public class Purchase {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne(optional = false)
+    private Product product;
+
+    private String supplierName;
+    private Integer quantity;
+    private BigDecimal totalCost;
+    
+    private LocalDateTime purchaseDate;
+
+    @PrePersist
+    protected void onCreate() {
+        purchaseDate = LocalDateTime.now();
+    }
+}
