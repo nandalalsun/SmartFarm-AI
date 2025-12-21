@@ -26,16 +26,17 @@ This diagram defines how your farm data is structured.
 ```mermaid
 erDiagram
     CUSTOMER ||--o{ SALE : "places"
-    CUSTOMER ||--o{ CREDIT_LEDGER : "owes"
+    CUSTOMER ||--o{ CREDIT_LEDGER : "has history of"
     PRODUCT ||--o{ SALE : "included in"
     PRODUCT ||--o{ PURCHASE : "restocked by"
     SALE ||--|| BILL_IMAGE : "documented by"
+    SALE ||--o| CREDIT_LEDGER : "generates"
     
     CUSTOMER {
         uuid id PK
         string name
         string phone
-        decimal current_balance
+        decimal current_total_balance
     }
 
     PRODUCT {
@@ -44,7 +45,6 @@ erDiagram
         decimal cost_price
         decimal selling_price
         int current_stock
-        int reorder_level
     }
 
     SALE {
@@ -53,6 +53,17 @@ erDiagram
         decimal total_amount
         string payment_type "CASH/CREDIT"
         timestamp created_at
+    }
+
+    CREDIT_LEDGER {
+        uuid id PK
+        uuid customer_id FK
+        uuid sale_id FK "Null if opening balance"
+        decimal credit_amount "Original debt"
+        decimal amount_paid "Total paid back so far"
+        decimal remaining_balance "Calculated field"
+        timestamp due_date
+        string status "PAID/PARTIAL/OVERDUE"
     }
 
     PURCHASE {
@@ -68,13 +79,6 @@ erDiagram
         uuid sale_id FK
         string s3_url
         json extracted_data
-    }
-
-    DOCUMENTS {
-        uuid id PK
-        string title
-        vector embedding "Vector Data for RAG"
-        text content
     }
 ```
 
