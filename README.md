@@ -24,6 +24,10 @@
 This diagram defines how your farm data is structured.
 
 ```mermaid
+---
+config:
+  layout: elk
+---
 erDiagram
     CUSTOMER ||--o{ SALE : "places"
     CUSTOMER ||--o{ CREDIT_LEDGER : "has history of"
