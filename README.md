@@ -119,9 +119,14 @@ graph TD
 
 
 ## 6. Future AI Context Summary
-**Copy and paste this paragraph the next time you start a chat with an AI to resume work:**
 
-> "I am building **FarmSmart AI**, a poultry farm billing and ERP app. **Tech Stack:** Java (Spring Boot), React, and PostgreSQL with pgvector. **Hosting:** AWS (Amplify, RDS, EC2 with GPU). **Key Features:** Credit/Cash sales management, inventory tracking, and profit analysis. It uses a **self-hosted LLM (Ollama/Llama 3)** for two main AI features: 
-> 1. **RAG/Text-to-SQL** for 'Smart Business Ask' (e.g., forecasting sales, querying credit totals). 
-> 2. **Multimodal Vision** for extracting sales details from photos of physical bills. 
-> I have the ERD and Infrastructure plan ready. Please help me with the next step of the implementation."
+> "I am building **FarmSmart AI**, a poultry farm ERP. 
+> **Architecture:** Java (Spring Boot), React, PostgreSQL (pgvector), hosted on AWS with a self-hosted Ollama (Llama 3).
+> **Data Model:** 
+> - **Customers** are categorized as **Farmers** (buying chicks/feed/medicine), **Butchers** (buying meat/eggs), or **Retail** (cash only). 
+> - **Inventory** tracks different categories (Feed, Medicine, Live Stock, Meat).
+> - **Credit Ledger** tracks debt history and partial payments, linked to customers and specific sales.
+> **AI Features:** 
+> 1. **Vision:** Extracting sales data from photos of bills. 
+> 2. **RAG:** Answering business questions about profit, expected sales, and customer credit status.
+> I have the ERD (v3) ready. Please help me with implementation steps."
