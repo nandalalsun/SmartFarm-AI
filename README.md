@@ -36,14 +36,21 @@ erDiagram
         uuid id PK
         string name
         string phone
+        string address
+        string email
+        string customer_type "FARMER / BUTCHER / RETAIL"
+        decimal credit_limit "Max credit allowed"
         decimal current_total_balance
+        timestamp registered_at
     }
 
     PRODUCT {
         uuid id PK
         string name
-        decimal cost_price
-        decimal selling_price
+        string category "FEED / MEDICINE / LIVE_CHICK / MEAT / EGGS"
+        decimal cost_price "What you paid"
+        decimal selling_price "Standard price"
+        string unit "KG / BAG / PIECE"
         int current_stock
     }
 
@@ -51,19 +58,21 @@ erDiagram
         uuid id PK
         uuid customer_id FK
         decimal total_amount
-        string payment_type "CASH/CREDIT"
+        string payment_type "CASH / CREDIT"
+        string sale_channel "POS / WHATSAPP / FIELD"
         timestamp created_at
     }
 
     CREDIT_LEDGER {
         uuid id PK
         uuid customer_id FK
-        uuid sale_id FK "Null if opening balance"
-        decimal credit_amount "Original debt"
-        decimal amount_paid "Total paid back so far"
-        decimal remaining_balance "Calculated field"
+        uuid sale_id FK
+        decimal credit_amount
+        decimal amount_paid
+        decimal remaining_balance
         timestamp due_date
-        string status "PAID/PARTIAL/OVERDUE"
+        string status "PAID / PARTIAL / OVERDUE"
+        string remarks "Notes on payment"
     }
 
     PURCHASE {
