@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class FinanceService {
@@ -131,7 +132,7 @@ public class FinanceService {
         return purchaseRepository.save(purchase);
     }
 
-    public java.util.Map<String, Object> getProfitReport() {
+    public Map<String, Object> getProfitReport() {
         List<Sale> sales = saleRepository.findAll();
         List<Purchase> purchases = purchaseRepository.findAll();
 
@@ -145,7 +146,7 @@ public class FinanceService {
 
         BigDecimal netProfit = totalRevenue.subtract(totalExpenses);
 
-        return java.util.Map.of(
+        return Map.of(
                 "totalRevenue", totalRevenue,
                 "totalExpenses", totalExpenses,
                 "netProfit", netProfit
