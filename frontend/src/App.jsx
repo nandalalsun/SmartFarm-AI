@@ -4,6 +4,7 @@ import Customers from './pages/Customers';
 import Products from './pages/Products';
 import NewSale from './pages/NewSale';
 import Dashboard from './pages/Dashboard';
+import BillScanner from './pages/BillScanner';
 
 function Home() {
   return (
@@ -37,6 +38,7 @@ function App() {
           <Route path="/products" element={<Products />} />
           <Route path="/sales/new" element={<NewSale />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/scan" element={<BillScanner />} />
         </Routes>
       </div>
     </BrowserRouter>
