@@ -1,44 +1,83 @@
 package com.farmsmart.backend.tools;
 
+import com.farmsmart.backend.ai.intent.IntentClassifier;
+import com.farmsmart.backend.ai.intent.IntentRequest;
+import com.farmsmart.backend.ai.query.QueryPlanner;
+import com.farmsmart.backend.ai.query.QueryResult;
 import dev.langchain4j.agent.tool.Tool;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Map;
-
+/**
+ * Intent-based database query tool for the Farm Assistant AI.
+ * 
+ * CRITICAL CHANGE: This tool NO LONGER accepts raw SQL from the LLM.
+ * Instead, it uses intent classification and deterministic query execution.
+ * 
+ * Flow:
+ * 1. LLM describes what it wants to know (intent + entities JSON)
+ * 2. IntentClassifier parses the request
+ * 3. QueryPlanner executes the appropriate SQL template
+ * 4. Results are returned to LLM for natural language response
+ * 
+ * The LLM NEVER sees or generates SQL.
+ */
 @Component
 public class DatabaseTool {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final IntentClassifier intentClassifier;
+    private final QueryPlanner queryPlanner;
 
-    public DatabaseTool(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    public DatabaseTool(IntentClassifier intentClassifier, QueryPlanner queryPlanner) {
+        this.intentClassifier = intentClassifier;
+        this.queryPlanner = queryPlanner;
     }
 
-    @Tool("Execute a read-only SQL query to find facts about stock, sales, customers, or transactions. The query must start with SELECT.")
-    public String executeQuery(String sql) {
+    @Tool("""
+        Query the farm database by describing what you want to know.
+        You must provide a natural language description of your query,
+        and I will classify it into the appropriate database query.
+        
+        NEVER generate SQL. Just describe what data you need.
+        
+        Examples:
+        - "Check stock for Flu Vaccine"
+        - "Find all low stock products"
+        - "Get credit balance for customer John Doe"
+        - "Show recent sales"
+        
+        I will return the data as structured results.
+        """)
+    public String queryDatabase(String queryDescription) {
         try {
-            String trimmedSql = sql.trim();
+            System.out.println("🛠️ DatabaseTool: Received query description: " + queryDescription);
             
-            // AUTOMATIC FIX: Replace double quotes with single quotes for value literals
-            // This handles cases like: name = "Alu" -> name = 'Alu'
-            // We use a regex to target quotes following =, LIKE, or IN comparisons to avoid breaking column identifiers (e.g. SELECT "col")
-            trimmedSql = trimmedSql.replaceAll("(?i)([=<>!]|LIKE)\\s*\"([^\"]+)\"", "$1 '$2'");
+            // Step 1: Classify the intent
+            IntentRequest intentRequest = intentClassifier.classify(queryDescription);
             
-            // Basic safety check
-            if (!trimmedSql.toLowerCase().startsWith("select")) {
-                System.out.println("❌ DatabaseTool Blocked unsafe query: " + trimmedSql);
-                return "Error: Only SELECT queries are allowed for safety.";
-            }
-
-            System.out.println("🛠️ DatabaseTool Executing: " + trimmedSql);
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList(trimmedSql);
-            System.out.println("✅ DatabaseTool Result: " + rows.toString());
-            return rows.toString();
+            // Step 2: Execute the query using the planner
+            QueryResult result = queryPlanner.execute(intentRequest);
+            
+            // Step 3: Format and return results
+            String formattedResult = result.toFormattedString();
+            System.out.println("✅ DatabaseTool: Returning results: " + formattedResult);
+            
+            return formattedResult;
+            
         } catch (Exception e) {
-            System.out.println("❌ DatabaseTool Error: " + e.getMessage());
-            return "Error executing query: " + e.getMessage();
+            System.err.println("❌ DatabaseTool: Error: " + e.getMessage());
+            e.printStackTrace();
+            return "Error querying database: " + e.getMessage();
         }
+    }
+    
+    /**
+     * DEPRECATED: Old method that accepted raw SQL (kept for reference, not exposed to LLM)
+     * This method is no longer a @Tool and will not be called by the AI.
+     */
+    @Deprecated
+    private String executeQuery_DEPRECATED(String sql) {
+        throw new UnsupportedOperationException(
+            "Direct SQL execution is no longer supported. Use queryDatabase() with natural language instead."
+        );
     }
 }
