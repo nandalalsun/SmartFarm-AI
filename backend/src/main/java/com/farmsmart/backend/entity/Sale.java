@@ -30,6 +30,9 @@ public class Sale {
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL)
     private List<SaleItem> items;
 
+    @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL)
+    private List<PaymentTransaction> paymentTransactions;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 

@@ -132,6 +132,62 @@ public class FinanceService {
         return purchaseRepository.save(purchase);
     }
 
+    public List<SaleHistoryDTO> getSalesHistory() {
+        return saleRepository.findAll().stream().map(this::mapToSaleHistoryDTO).toList();
+    }
+
+    public List<PurchaseHistoryDTO> getPurchaseHistory() {
+        return purchaseRepository.findAll().stream().map(this::mapToPurchaseHistoryDTO).toList();
+    }
+
+    private SaleHistoryDTO mapToSaleHistoryDTO(Sale sale) {
+        SaleHistoryDTO dto = new SaleHistoryDTO();
+        dto.setId(sale.getId());
+        dto.setDate(sale.getCreatedAt());
+        dto.setCustomerName(sale.getCustomer().getName());
+        dto.setTotalBillAmount(sale.getTotalBillAmount());
+        dto.setInitialPaidAmount(sale.getInitialPaidAmount());
+        dto.setRemainingBalance(sale.getRemainingBalance());
+        dto.setPaymentStatus(sale.getPaymentStatus());
+
+        // Map Items
+        List<SaleHistoryItemDTO> items = sale.getItems().stream().map(item -> {
+            SaleHistoryItemDTO itemDTO = new SaleHistoryItemDTO();
+            itemDTO.setProductName(item.getProduct().getName());
+            itemDTO.setQuantity(item.getQuantity());
+            itemDTO.setUnitPrice(item.getUnitPrice());
+            itemDTO.setLineTotal(item.getLineTotal());
+            return itemDTO;
+        }).toList();
+        dto.setItems(items);
+
+        // Map Payments
+        List<PaymentHistoryDTO> payments = new ArrayList<>();
+        if (sale.getPaymentTransactions() != null) {
+            payments = sale.getPaymentTransactions().stream().map(txn -> {
+                PaymentHistoryDTO txnDTO = new PaymentHistoryDTO();
+                txnDTO.setPaymentDate(txn.getPaymentDate());
+                txnDTO.setAmountPaid(txn.getAmountPaid());
+                txnDTO.setPaymentMethod(txn.getPaymentMethod());
+                return txnDTO;
+            }).toList();
+        }
+        dto.setPaymentHistory(payments);
+
+        return dto;
+    }
+
+    private PurchaseHistoryDTO mapToPurchaseHistoryDTO(Purchase purchase) {
+        PurchaseHistoryDTO dto = new PurchaseHistoryDTO();
+        dto.setId(purchase.getId());
+        dto.setDate(purchase.getPurchaseDate());
+        dto.setSupplierName(purchase.getSupplierName());
+        dto.setProductName(purchase.getProduct().getName());
+        dto.setQuantity(purchase.getQuantity());
+        dto.setTotalCost(purchase.getTotalCost());
+        return dto;
+    }
+
     public Map<String, Object> getProfitReport() {
         List<Sale> sales = saleRepository.findAll();
         List<Purchase> purchases = purchaseRepository.findAll();

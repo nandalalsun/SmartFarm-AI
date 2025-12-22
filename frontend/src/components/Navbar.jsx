@@ -23,6 +23,9 @@ export default function Navbar() {
                 <Link to="/scan" className="text-gray-300 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                   Scan Bill
                 </Link>
+                <Link to="/transactions" className="text-gray-300 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                  Transactions
+                </Link>
                 <Link to="/dashboard" className="text-gray-300 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-md text-sm font-medium transition-colors">
                   Dashboard
                 </Link>

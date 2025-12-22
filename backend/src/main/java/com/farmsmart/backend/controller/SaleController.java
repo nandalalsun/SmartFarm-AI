@@ -17,4 +17,9 @@ public class SaleController {
     public Sale createSale(@RequestBody SaleRequestDTO request) {
         return financeService.createSale(request);
     }
+
+    @GetMapping("/history")
+    public java.util.List<com.farmsmart.backend.dto.SaleHistoryDTO> getHistory() {
+        return financeService.getSalesHistory();
+    }
 }

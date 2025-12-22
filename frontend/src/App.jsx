@@ -5,6 +5,8 @@ import Products from './pages/Products';
 import NewSale from './pages/NewSale';
 import Dashboard from './pages/Dashboard';
 import BillScanner from './pages/BillScanner';
+import Transactions from './pages/Transactions';
+import FarmAssistant from './components/FarmAssistant';
 
 function Home() {
   return (
@@ -39,8 +41,10 @@ function App() {
           <Route path="/sales/new" element={<NewSale />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/scan" element={<BillScanner />} />
+          <Route path="/transactions" element={<Transactions />} />
         </Routes>
       </div>
+      <FarmAssistant />
     </BrowserRouter>
   );
 }

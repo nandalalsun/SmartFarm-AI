@@ -17,4 +17,9 @@ public class PurchaseController {
     public Purchase createPurchase(@RequestBody PurchaseDTO request) {
         return financeService.createPurchase(request);
     }
+
+    @GetMapping("/history")
+    public java.util.List<com.farmsmart.backend.dto.PurchaseHistoryDTO> getHistory() {
+        return financeService.getPurchaseHistory();
+    }
 }
