@@ -36,7 +36,7 @@ export default function Toast({ message, type = 'success', onClose }) {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 animate-slide-in">
+    <div className="fixed bottom-24 right-6 z-50 animate-slide-in">
       <div className={`${styles[type]} backdrop-blur-sm border-2 rounded-lg shadow-2xl px-6 py-4 min-w-[300px] max-w-md flex items-start gap-3`}>
         <div className="flex-shrink-0 text-2xl">
           {icons[type]}
