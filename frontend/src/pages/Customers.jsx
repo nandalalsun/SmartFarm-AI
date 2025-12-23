@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
+import Toast from '../components/Toast';
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
@@ -11,6 +12,7 @@ export default function Customers() {
     customerType: 'FARMER', 
     creditLimit: '' 
   });
+  const [toast, setToast] = useState({ message: '', type: '' });
 
   useEffect(() => {
     fetchCustomers();
@@ -27,13 +29,18 @@ export default function Customers() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name) return;
+    if (!form.name) {
+      setToast({ message: 'Customer name is required', type: 'error' });
+      return;
+    }
     try {
       await api.post('/customers', form);
-      setForm({ name: '', phone: '' });
+      setForm({ name: '', phone: '', email: '', address: '', customerType: 'FARMER', creditLimit: '' });
       fetchCustomers();
+      setToast({ message: '✓ Customer added successfully!', type: 'success' });
     } catch (err) {
       console.error("Failed to add customer", err);
+      setToast({ message: err.response?.data?.message || 'Failed to add customer', type: 'error' });
     }
   };
 
@@ -121,6 +128,12 @@ export default function Customers() {
           </tbody>
         </table>
       </div>
+
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ message: '', type: '' })} 
+      />
     </div>
   );
 }

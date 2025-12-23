@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../api/axios';
+import Toast from '../components/Toast';
 
 const NewSale = () => {
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [toast, setToast] = useState({ message: '', type: '' });
 
   const [formData, setFormData] = useState({
     customerId: '',
@@ -42,7 +42,7 @@ const NewSale = () => {
     
     // Check Stock locally
     if (product.currentStock < quantity) {
-      setError(`Insufficient stock! Only ${product.currentStock} ${product.unit} available.`);
+      setToast({ message: `Insufficient stock! Only ${product.currentStock} ${product.unit} available.`, type: 'error' });
       return;
     }
 
@@ -55,7 +55,7 @@ const NewSale = () => {
     };
 
     setCart([...cart, newItem]);
-    setError('');
+    setToast({ message: '', type: '' });
     setSelectedProduct('');
     setQuantity(1);
   };
@@ -105,8 +105,7 @@ const NewSale = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setSuccess('');
+    setToast({ message: '', type: '' });
 
     try {
       if (cart.length === 0) throw new Error("Cart is empty");
@@ -125,13 +124,13 @@ const NewSale = () => {
       };
 
       await axios.post('/sales', payload);
-      setSuccess('Sale recorded successfully!');
+      setToast({ message: '✓ Sale recorded successfully!', type: 'success' });
       setCart([]);
       setFormData({ ...formData, initialPaidAmount: '' });
       // Refresh Data (Stock might have changed)
       fetchData();
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "Failed to save sale");
+      setToast({ message: err.response?.data?.message || err.message || 'Failed to save sale', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -144,9 +143,6 @@ const NewSale = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-white">New Sale</h1>
       </div>
-
-      {error && <div className="bg-red-500/10 border border-red-500 text-red-500 p-4 rounded-lg">{error}</div>}
-      {success && <div className="bg-green-500/10 border border-green-500 text-green-500 p-4 rounded-lg">{success}</div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Col: Cart & Product Selection */}
@@ -307,6 +303,12 @@ const NewSale = () => {
           </div>
         </div>
       </div>
+
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ message: '', type: '' })} 
+      />
     </div>
   );
 };

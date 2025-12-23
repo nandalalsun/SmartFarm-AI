@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
+import Toast from '../components/Toast';
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -11,6 +12,7 @@ export default function Products() {
     category: 'FEED',
     unit: 'KG'
   });
+  const [toast, setToast] = useState({ message: '', type: '' });
 
   useEffect(() => {
     fetchProducts();
@@ -27,13 +29,18 @@ export default function Products() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name) return;
+    if (!form.name) {
+      setToast({ message: 'Product name is required', type: 'error' });
+      return;
+    }
     try {
       await api.post('/products', form);
-      setForm({ name: '', costPrice: '', sellingPrice: '', currentStock: '' });
+      setForm({ name: '', costPrice: '', sellingPrice: '', currentStock: '', category: 'FEED', unit: 'KG' });
       fetchProducts();
+      setToast({ message: '✓ Product added successfully!', type: 'success' });
     } catch (err) {
       console.error("Failed to add product", err);
+      setToast({ message: err.response?.data?.message || 'Failed to add product', type: 'error' });
     }
   };
 
@@ -128,6 +135,12 @@ export default function Products() {
           </tbody>
         </table>
       </div>
+
+      <Toast 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ message: '', type: '' })} 
+      />
     </div>
   );
 }
