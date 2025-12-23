@@ -1,64 +1,121 @@
 import React, { useState, useEffect } from 'react';
-// We'll create a simple finance endpoint or just aggregate local data for now if needed, 
-// but plan says /api/finance/report. Let's create a placeholder or simple aggregation.
-
-// Since the Backend Controller for /api/finance/report wasn't explicitly created in previous steps 
-// (I missed it in the plan Execution, only did Sale/Purchase controllers), 
-// I will create a simple FinanceController now or just use this page to show a placeholder 
-// and then add the controller. 
-// Actually, I should add the controller first. 
-// But let's write this component to expect the API.
-
 import axios from '../api/axios';
+import KPICard from '../components/KPICard';
+import RevenueChart from '../components/RevenueChart';
+import StockDonut from '../components/StockDonut';
+import CreditHeatmap from '../components/CreditHeatmap';
+import AIInsights from '../components/AIInsights';
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
-    totalRevenue: 0,
-    totalExpenses: 0,
-    netProfit: 0
-  });
+  const [stats, setStats] = useState(null);
+  const [revenueExpenseData, setRevenueExpenseData] = useState([]);
+  const [stockData, setStockData] = useState([]);
+  const [topCredits, setTopCredits] = useState([]);
+  const [aiInsights, setAIInsights] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // For now, we might not have the endpoint ready, so let's try to fetch sales and sum them up client side
-    // OR best practice: Implement the missing Controller first.
-    // I will implement the controller in the next step.
-    fetchStats();
+    fetchDashboardData();
   }, []);
 
-  const fetchStats = async () => {
+  const fetchDashboardData = async () => {
     try {
-       const res = await axios.get('/finance/report');
-       setStats(res.data);
+      setLoading(true);
+      
+      // Fetch all dashboard data in parallel
+      const [statsRes, revenueRes, stockRes, creditsRes, insightsRes] = await Promise.all([
+        axios.get('/dashboard/stats'),
+        axios.get('/dashboard/revenue-expense'),
+        axios.get('/dashboard/stock-distribution'),
+        axios.get('/dashboard/top-credits'),
+        axios.get('/dashboard/ai-insights')
+      ]);
+      
+      setStats(statsRes.data);
+      setRevenueExpenseData(revenueRes.data);
+      setStockData(stockRes.data);
+      setTopCredits(creditsRes.data);
+      setAIInsights(insightsRes.data);
     } catch (err) {
-      console.error("Error fetching finance stats", err);
+      console.error("Error fetching dashboard data:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-white">Finance Dashboard</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
-          <h3 className="text-slate-400 font-medium mb-2">Total Revenue</h3>
-          <p className="text-3xl font-bold text-green-400">₹{stats.totalRevenue.toLocaleString()}</p>
-        </div>
-        
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
-          <h3 className="text-slate-400 font-medium mb-2">Total Expenses</h3>
-          <p className="text-3xl font-bold text-red-400">₹{stats.totalExpenses.toLocaleString()}</p>
-        </div>
-
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
-          <h3 className="text-slate-400 font-medium mb-2">Net Profit</h3>
-          <p className={`text-3xl font-bold ${stats.netProfit >= 0 ? 'text-violet-400' : 'text-orange-400'}`}>
-            ₹{stats.netProfit.toLocaleString()}
-          </p>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f8f9fa] p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-[#1b4332] border-r-transparent"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
         </div>
       </div>
+    );
+  }
 
-      <div className="bg-slate-800 p-8 rounded-xl border border-slate-700 text-center">
-        <p className="text-slate-500">Charts and detailed analysis coming in Phase 3.</p>
+  return (
+    <div className="min-h-screen bg-slate-950 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-[#1b4332]">Dashboard</h1>
+          <p className="text-slate-100 mt-2">Your business at a glance</p>
+        </div>
+
+        {/* KPI Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <KPICard 
+            title="Revenue" 
+            value={stats?.revenue?.value || 0}
+            trend={stats?.revenue?.trend || []}
+            change={stats?.revenue?.change || 0}
+          />
+          <KPICard 
+            title="Profit" 
+            value={stats?.profit?.value || 0}
+            trend={stats?.profit?.trend || []}
+            change={stats?.profit?.change || 0}
+          />
+          <KPICard 
+            title="Stock Value" 
+            value={stats?.stockValue?.value || 0}
+            trend={stats?.stockValue?.trend || []}
+            change={stats?.stockValue?.change || 0}
+          />
+          <KPICard 
+            title="Credits" 
+            value={stats?.credits?.value || 0}
+            trend={stats?.credits?.trend || []}
+            change={stats?.credits?.change || 0}
+          />
+        </div>
+
+        {/* Main Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Revenue Chart - Spans 2 columns */}
+          <div className="lg:col-span-2">
+            <RevenueChart data={revenueExpenseData} />
+          </div>
+          
+          {/* Stock Donut - 1 column */}
+          <div>
+            <StockDonut data={stockData} />
+          </div>
+        </div>
+
+        {/* Bottom Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Credit Heatmap - Spans 2 columns */}
+          <div className="lg:col-span-2">
+            <CreditHeatmap customers={topCredits} />
+          </div>
+          
+          {/* AI Insights - 1 column */}
+          <div>
+            <AIInsights insights={aiInsights} />
+          </div>
+        </div>
       </div>
     </div>
   );
