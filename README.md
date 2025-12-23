@@ -138,7 +138,99 @@ graph TD
 
 ---
 
-## 5. Execution Roadmap
+## 5. AI Architecture (Intent-Driven)
+
+FarmSmart AI uses a **hallucination-proof, intent-driven architecture** that eliminates SQL generation by the LLM, ensuring ERP safety and data integrity.
+
+### Architecture Flow
+
+```mermaid
+graph TD
+    A[User Query] --> B[IntentClassifier]
+    B --> C{Intent Classification<br/>JSON Output Only}
+    C -->|JSON| D[QueryPlanner]
+    D --> E[SqlTemplateRegistry]
+    E --> F{Select Hardcoded<br/>SQL Template}
+    F --> G[NamedParameterJdbcTemplate]
+    G --> H[(PostgreSQL Database)]
+    H --> I[QueryResult]
+    I --> J[LLM Natural Language]
+    J --> K[User Response]
+    
+    style B fill:#90EE90
+    style D fill:#87CEEB
+    style E fill:#FFD700
+    style G fill:#DDA0DD
+    style J fill:#FFA07A
+```
+
+### Key Principles
+
+| Component | Role | SQL Access |
+|-----------|------|------------|
+| **IntentClassifier** | LLM classifies user intent to JSON | ❌ None |
+| **QueryIntent** (enum) | 20+ predefined intents | ❌ None |
+| **SqlTemplateRegistry** | Hardcoded SQL templates | ✅ SELECT only |
+| **QueryPlanner** | Deterministic query execution | ✅ Executes templates |
+| **DatabaseTool** | Accepts natural language descriptions | ❌ No SQL input |
+
+### Supported Intents
+
+#### Inventory (4 intents)
+- `INVENTORY_CHECK_PRODUCT` - Check stock for a specific product
+- `INVENTORY_LOW_STOCK` - Find products below threshold
+- `INVENTORY_BY_CATEGORY` - List products by category
+- `INVENTORY_ALL` - List all products
+
+#### Sales (5 intents)
+- `SALES_TOTAL_BY_CUSTOMER` - Customer sales summary
+- `SALES_TOTAL_BY_DATE_RANGE` - Sales within date range
+- `SALES_BY_PRODUCT` - Product sales history
+- `SALES_RECENT` - Recent transactions
+- `SALES_DETAIL` - Detailed sale information
+
+#### Credit (3 intents)
+- `CREDIT_BALANCE_CUSTOMER` - Customer credit balance
+- `CREDIT_OVERDUE_ALL` - Overdue accounts
+- `CREDIT_SUMMARY` - Overall credit summary
+
+#### Payments (3 intents)
+- `PAYMENT_HISTORY_SALE` - Payment history for sale
+- `PAYMENT_SUMMARY_BY_METHOD` - Payment totals by method
+- `PAYMENT_HISTORY_CUSTOMER` - Customer payment history
+
+#### Customers (3 intents)
+- `CUSTOMER_INFO` - Customer details
+- `CUSTOMER_LIST_BY_TYPE` - Customers by type
+- `CUSTOMER_LIST_ALL` - All customers
+
+#### Special (2 intents)
+- `KNOWLEDGE_SEARCH` - Search poultry manuals (RAG)
+- `CLARIFICATION_NEEDED` - Query unclear
+
+### Safety Guarantees
+
+✅ **No SQL Hallucination** - LLM outputs JSON only, never SQL  
+✅ **Deterministic Queries** - Same intent always executes same SQL template  
+✅ **ERP-Safe** - All queries are read-only (SELECT)  
+✅ **Auditable** - Full console logging of all queries  
+✅ **Type-Safe** - Named parameters prevent SQL injection  
+
+### Example Conversation
+
+**User:** "How many Flu Vaccine do we have?"
+
+**Backend Flow:**
+1. IntentClassifier → `{"intent": "INVENTORY_CHECK_PRODUCT", "entities": {"productName": "Flu Vaccine"}}`
+2. QueryPlanner → Executes template: `SELECT name, current_stock, unit FROM product WHERE LOWER(name) = LOWER(:productName)`
+3. Database → Returns: `[{name: "Flu Vaccine", current_stock: 38, unit: "PIECE"}]`
+4. LLM → "We currently have 38 pieces of Flu Vaccine in stock."
+
+**No SQL appears in the conversation.**
+
+---
+
+## 6. Execution Roadmap
 1.  **Phase 1 (Core):** Setup Spring Boot + PostgreSQL. Build basic CRUD for Products and Customers.
 2.  **Phase 2 (Finance):** Implement Sale/Purchase logic and Profit/Loss calculation scripts.
 3.  **Phase 3 (AI Vision):** Setup Ollama with `llama3.2-vision`. Build the Java service to process images into JSON.
@@ -148,7 +240,7 @@ graph TD
 ---
 
 
-## 6. Future AI Context Summary
+## 7. Future AI Context Summary
 **Copy and paste this paragraph the next time you start a chat with an AI to resume work:**
 
 > "I am building **FarmSmart AI**, a poultry farm billing and ERP app. **Tech Stack:** Java (Spring Boot), React, and PostgreSQL with pgvector. **Hosting:** AWS (Amplify, RDS, EC2 with GPU). **Key Features:** Credit/Cash sales management, inventory tracking, and profit analysis. It uses a **self-hosted LLM (Ollama/Llama 3)** for two main AI features: 
