@@ -56,9 +56,24 @@ public class DashboardController {
         return dashboardService.getTopCredits();
     }
     
+    @GetMapping("/alerts/low-stock")
+    public List<Map<String, Object>> getLowStockAlerts() {
+        return dashboardService.getLowStockAlerts();
+    }
+
+    @GetMapping("/alerts/aging-credit")
+    public List<Map<String, Object>> getAgingCredits() {
+        return dashboardService.getAgingCredits();
+    }
+
+    @GetMapping("/stock-movement")
+    public List<Map<String, Object>> getRecentStockMovement() {
+        return dashboardService.getRecentStockMovement();
+    }
+
     /**
      * GET /api/dashboard/ai-insights
-     * Returns AI-generated insights (rule-based for now)
+     * Returns AI-generated insights
      */
     @GetMapping("/ai-insights")
     public List<String> getAIInsights() {

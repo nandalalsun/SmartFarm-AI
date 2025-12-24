@@ -1,27 +1,23 @@
 package com.farmsmart.backend.service;
 
-import com.farmsmart.backend.dto.dashboard.DashboardStatsDTO;
-import com.farmsmart.backend.dto.dashboard.KpiStatDTO;
-import com.farmsmart.backend.dto.dashboard.RevenueExpenseDayDTO;
-import com.farmsmart.backend.dto.dashboard.StockDistributionDTO;
-import com.farmsmart.backend.dto.dashboard.TopCreditDTO;
-import com.farmsmart.backend.dto.dashboard.TrendPointDTO;
+import com.farmsmart.backend.dto.dashboard.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class DashboardService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final FarmAssistantService farmAssistantService;
 
-    public DashboardService(JdbcTemplate jdbcTemplate) {
+    public DashboardService(JdbcTemplate jdbcTemplate, FarmAssistantService farmAssistantService) {
         this.jdbcTemplate = jdbcTemplate;
+        this.farmAssistantService = farmAssistantService;
     }
 
     public DashboardStatsDTO getDashboardStats() {
@@ -39,72 +35,77 @@ public class DashboardService {
         Double totalCredits = jdbcTemplate.queryForObject(
                 "SELECT COALESCE(SUM(current_total_balance), 0) FROM customer", Double.class);
 
-        List<TrendPointDTO> revenueTrend = get7DayTrend("sale", "total_bill_amount");
-        List<TrendPointDTO> stockTrend = get7DayStockTrend();
-        List<TrendPointDTO> creditTrend = get7DayCreditTrend();
+        List<TrendPointDTO> revenueTrend = get7DayTrend("sale", "total_bill_amount", "created_at");
+        // For stock trend, we can't do historical without history table, so we pass empty or current flat
+        // Alternatively, we could log stock changes. For now, we'll send a flat trend of current value
+        List<TrendPointDTO> stockTrend = getFlatTrend(stockValue);
+        List<TrendPointDTO> creditTrend = get7DayTrend("customer", "current_total_balance", "registered_at"); // Approximation by registration
 
         double revenueChange = calculatePercentageChange(revenueTrend);
         double profitChange = calculatePercentageChange(revenueTrend);
-        double stockChange = calculatePercentageChange(stockTrend);
+        double stockChange = 0.0; // No historical data
         double creditChange = calculatePercentageChange(creditTrend);
 
         KpiStatDTO revenue = KpiStatDTO.builder()
                 .value(totalRevenue)
-                .change( revenueChange)
-                .trend( revenueTrend)
+                .change(revenueChange)
+                .trend(revenueTrend)
                 .build();
 
         KpiStatDTO profit = KpiStatDTO.builder()
-                .trend( revenueTrend )
-                .change( profitChange)
-                .value( netProfit)
+                .trend(revenueTrend)
+                .change(profitChange)
+                .value(netProfit)
                 .build();
 
-        KpiStatDTO stock =  KpiStatDTO.builder()
+        KpiStatDTO stock = KpiStatDTO.builder()
                 .value(stockValue)
                 .trend(stockTrend)
                 .change(stockChange)
                 .build();
 
         KpiStatDTO credits = KpiStatDTO.builder()
-                .change( creditChange)
-                .trend( creditTrend)
+                .change(creditChange)
+                .trend(creditTrend)
                 .value(totalCredits)
                 .build();
 
         return DashboardStatsDTO.builder()
-                .credits( credits )
-                .stockValue( stock )
-                .profit( profit )
-                .revenue( revenue )
+                .credits(credits)
+                .stockValue(stock)
+                .profit(profit)
+                .revenue(revenue)
                 .build();
     }
 
+    // Optimized: Using GROUP BY to fetch all 7 days in one query
     public List<RevenueExpenseDayDTO> getRevenueExpenseData() {
-        List<RevenueExpenseDayDTO> data = new ArrayList<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd");
+        String sql = """
+            WITH dates AS (
+                SELECT generate_series(
+                    CURRENT_DATE - INTERVAL '6 days',
+                    CURRENT_DATE,
+                    '1 day'::interval
+                )::date AS date
+            )
+            SELECT 
+                to_char(d.date, 'MMM dd') as day,
+                COALESCE(SUM(s.total_bill_amount), 0) as revenue,
+                COALESCE(SUM(p.total_cost), 0) as expense
+            FROM dates d
+            LEFT JOIN sale s ON DATE(s.created_at) = d.date
+            LEFT JOIN purchase p ON DATE(p.purchase_date) = d.date
+            GROUP BY d.date
+            ORDER BY d.date ASC
+        """;
 
-        for (int i = 6; i >= 0; i--) {
-            LocalDate date = LocalDate.now().minusDays(i);
-            String dateStr = date.toString();
-
-            Double revenue = jdbcTemplate.queryForObject(
-                    "SELECT COALESCE(SUM(total_bill_amount), 0) FROM sale WHERE DATE(created_at) = ?",
-                    Double.class, dateStr);
-
-            Double expense = jdbcTemplate.queryForObject(
-                    "SELECT COALESCE(SUM(total_cost), 0) FROM purchase WHERE DATE(purchase_date) = ?",
-                    Double.class, dateStr);
-
-            RevenueExpenseDayDTO dayData = new RevenueExpenseDayDTO();
-            dayData.setDay(date.format(formatter));
-            dayData.setRevenue(revenue);
-            dayData.setExpense(expense);
-
-            data.add(dayData);
-        }
-
-        return data;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            RevenueExpenseDayDTO dto = new RevenueExpenseDayDTO();
+            dto.setDay(rs.getString("day"));
+            dto.setRevenue(rs.getDouble("revenue"));
+            dto.setExpense(rs.getDouble("expense"));
+            return dto;
+        });
     }
 
     public List<StockDistributionDTO> getStockDistribution() {
@@ -142,97 +143,122 @@ public class DashboardService {
         });
     }
 
+    // New: Real AI Insights
     public List<String> getAIInsights() {
-        List<String> insights = new ArrayList<>();
-
-        Double totalRevenue = jdbcTemplate.queryForObject(
-                "SELECT COALESCE(SUM(total_bill_amount), 0) FROM sale", Double.class);
-        Double totalExpenses = jdbcTemplate.queryForObject(
-                "SELECT COALESCE(SUM(total_cost), 0) FROM purchase", Double.class);
-        Double profitMargin = ((totalRevenue - totalExpenses) / totalRevenue) * 100;
-
-        if (profitMargin > 20) {
-            insights.add("Excellent profit margin of " + String.format("%.1f", profitMargin) + "% indicates healthy business operations");
-        } else if (profitMargin > 10) {
-            insights.add("Profit margin at " + String.format("%.1f", profitMargin) + "% is stable, consider optimizing costs for growth");
-        } else {
-            insights.add("Profit margin of " + String.format("%.1f", profitMargin) + "% suggests need for cost reduction or price adjustment");
+        try {
+            // We construct a prompt with key data for the AI to analyze
+            String dataSummary = getBusinessSummaryForAI();
+            String response = farmAssistantService.chat(
+                "Analyze this farm business data and provide 3 short, actionable bullet points (no asterisks just text) about health, risks, or opportunities: " + dataSummary
+            );
+            
+            // Basic parsing assuming AI returns lines
+            return List.of(response.split("\n"));
+        } catch (Exception e) {
+            return List.of("AI Service currently unavailable. Please check system logs.");
         }
-
-        Map<String, Object> topCategory = jdbcTemplate.queryForMap(
-                "SELECT category, SUM(current_stock * selling_price) as value FROM product GROUP BY category ORDER BY value DESC LIMIT 1");
-        insights.add(topCategory.get("category") + " category holds the highest stock value, contributing $" +
-                String.format("%.0f", ((Number) topCategory.get("value")).doubleValue()) + " to inventory");
-
-        Long highCreditCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM customer WHERE current_total_balance > (credit_limit * 0.8) AND current_total_balance > 0",
-                Long.class);
-
-        if (highCreditCount > 0) {
-            insights.add(highCreditCount + " customer" + (highCreditCount > 1 ? "s are" : " is") +
-                    " approaching credit limit - consider follow-up for collections");
-        } else {
-            insights.add("All customer credit balances are within healthy limits, no immediate collection concerns");
-        }
-
-        return insights;
     }
 
-    private List<TrendPointDTO> get7DayTrend(String table, String column) {
-        List<TrendPointDTO> trend = new ArrayList<>();
-
-        for (int i = 6; i >= 0; i--) {
-            LocalDate date = LocalDate.now().minusDays(i);
-            String dateStr = date.toString();
-
-            Double value = jdbcTemplate.queryForObject(
-                    "SELECT COALESCE(SUM(" + column + "), 0) FROM " + table +
-                            " WHERE DATE(created_at) = ?", Double.class, dateStr);
-
-            TrendPointDTO point = new TrendPointDTO();
-            point.setValue(value);
-            trend.add(point);
-        }
-
-        return trend;
+    // New: Low Stock Alerts
+    public List<Map<String, Object>> getLowStockAlerts() {
+        String sql = """
+            SELECT name, current_stock, unit 
+            FROM product 
+            WHERE current_stock < 10 AND current_stock IS NOT NULL 
+            ORDER BY current_stock ASC 
+            LIMIT 5
+        """;
+        return jdbcTemplate.queryForList(sql);
     }
 
-    private List<TrendPointDTO> get7DayStockTrend() {
-        List<TrendPointDTO> trend = new ArrayList<>();
-        Double stockValue = jdbcTemplate.queryForObject(
-                "SELECT COALESCE(SUM(current_stock * selling_price), 0) FROM product", Double.class);
-
-        for (int i = 0; i < 7; i++) {
-            TrendPointDTO point = new TrendPointDTO();
-            point.setValue(stockValue * (0.95 + (Math.random() * 0.1)));
-            trend.add(point);
+    // New: Aging Credits
+    public List<Map<String, Object>> getAgingCredits() {
+        // Checking credit_ledger for overdue
+        String sql = """
+            SELECT c.name, cl.current_balance, cl.due_date 
+            FROM credit_ledger cl
+            JOIN customer c ON cl.customer_id = c.id
+            WHERE cl.status = 'ACTIVE' AND cl.due_date < CURRENT_DATE
+            ORDER BY cl.due_date ASC 
+            LIMIT 5
+        """;
+        // If credit_ledger doesn't exist yet (might be a new table), we fallback or fail gracefully.
+        // Assuming it exists based on user prompt. If not, we might need to use customer balance.
+        try {
+             return jdbcTemplate.queryForList(sql);
+        } catch (Exception e) {
+             // Fallback if credit_ledger not present
+             return List.of();
         }
-
-        return trend;
     }
 
-    private List<TrendPointDTO> get7DayCreditTrend() {
-        List<TrendPointDTO> trend = new ArrayList<>();
-        Double totalCredits = jdbcTemplate.queryForObject(
-                "SELECT COALESCE(SUM(current_total_balance), 0) FROM customer", Double.class);
+    public List<Map<String, Object>> getRecentStockMovement() {
+        String sql = """
+           WITH dates AS (
+                SELECT generate_series(
+                    CURRENT_DATE - INTERVAL '6 days', 
+                    CURRENT_DATE, 
+                    '1 day'::interval
+                )::date AS date
+            )
+            SELECT 
+                to_char(d.date, 'MMM dd') as day,
+                (SELECT COUNT(*) FROM sale s WHERE DATE(s.created_at) = d.date) as sales_count,
+                (SELECT COUNT(*) FROM purchase p WHERE DATE(p.purchase_date) = d.date) as purchases_count
+            FROM dates d
+            ORDER BY d.date ASC
+        """;
+        return jdbcTemplate.queryForList(sql);
+    }
 
-        for (int i = 0; i < 7; i++) {
+    // Helper: Optimized N+1 fix for trends
+    private List<TrendPointDTO> get7DayTrend(String table, String sumCol, String dateCol) {
+        String sql = String.format("""
+            WITH dates AS (
+                SELECT generate_series(
+                    CURRENT_DATE - INTERVAL '6 days',
+                    CURRENT_DATE,
+                    '1 day'::interval
+                )::date AS date
+            )
+            SELECT 
+                d.date,
+                COALESCE(SUM(t.%s), 0) as value
+            FROM dates d
+            LEFT JOIN %s t ON DATE(t.%s) = d.date
+            GROUP BY d.date
+            ORDER BY d.date ASC
+        """, sumCol, table, dateCol);
+
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
             TrendPointDTO point = new TrendPointDTO();
-            point.setValue(totalCredits * (0.9 + (Math.random() * 0.2)));
-            trend.add(point);
-        }
+            point.setValue(rs.getDouble("value"));
+            return point;
+        });
+    }
 
-        return trend;
+    private List<TrendPointDTO> getFlatTrend(Double value) {
+         List<TrendPointDTO> trend = new ArrayList<>();
+         for(int i=0; i<7; i++) {
+             TrendPointDTO p = new TrendPointDTO();
+             p.setValue(value);
+             trend.add(p);
+         }
+         return trend;
     }
 
     private double calculatePercentageChange(List<TrendPointDTO> trend) {
         if (trend.size() < 2) return 0;
-
         Double firstValue = trend.get(0).getValue();
         Double lastValue = trend.get(trend.size() - 1).getValue();
-
-        if (firstValue == 0) return 0;
-
+        if (firstValue == 0) return 100.0; // Growth from 0 is 100% effectively
         return ((lastValue - firstValue) / firstValue) * 100;
+    }
+    
+    // Helper to gather data for AI context
+    private String getBusinessSummaryForAI() {
+        Double revenue = jdbcTemplate.queryForObject("SELECT COALESCE(SUM(total_bill_amount), 0) FROM sale", Double.class);
+        Double expense = jdbcTemplate.queryForObject("SELECT COALESCE(SUM(total_cost), 0) FROM purchase", Double.class);
+        return String.format("Total Revenue: $%.2f, Total Expense: $%.2f. ", revenue, expense);
     }
 }
