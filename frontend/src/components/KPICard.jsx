@@ -1,38 +1,35 @@
-import { LineChart, Line, ResponsiveContainer } from 'recharts';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
-export default function KPICard({ title, value, trend, change }) {
+const KPICard = ({ title, value, change, icon: Icon, prefix = '' }) => {
   const isPositive = change >= 0;
-  
+
   return (
-    <div className="bg-slate-900/50 rounded-2xl p-6 shadow-sm border border-slate-800 hover:shadow-md transition-shadow">
-      <h3 className="text-sm font-medium text-slate-100 mb-2">{title}</h3>
-      
-      <div className="flex items-end justify-between mb-3">
-        <p className="text-3xl font-bold text-slate-100">
-          ${value ? value.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '0'}
-        </p>
-        
-        <div className={`flex items-center text-sm font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-          {isPositive ? '↑' : '↓'} {Math.abs(change).toFixed(1)}%
+    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+      <div className="flex justify-between mb-3">
+        <div>
+          <p className="text-slate-400 text-sm">{title}</p>
+          <h3 className="text-2xl font-bold">
+            {prefix}{value?.toLocaleString() ?? 0}
+          </h3>
         </div>
+
+        {Icon && (
+          <Icon className="w-5 h-5 text-slate-400" />
+        )}
       </div>
-      
-      {/* Sparkline */}
-      <div className="h-12">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={trend || []}>
-            <Line 
-              type="monotone" 
-              dataKey="value" 
-              stroke={isPositive ? '#10b981' : '#ef4444'}
-              strokeWidth={2}
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-      
-      <p className="text-xs text-slate-100 mt-2">Last 7 days</p>
+
+      {typeof change === 'number' && (
+        <div
+          className={`text-xs flex items-center gap-1 ${
+            isPositive ? 'text-emerald-500' : 'text-rose-500'
+          }`}
+        >
+          {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+          {Math.abs(change).toFixed(1)}%
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default KPICard;
