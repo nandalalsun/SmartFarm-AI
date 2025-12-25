@@ -93,7 +93,7 @@ export default function Transactions() {
               </tr>
             </thead>
             <tbody className="bg-slate-800 divide-y divide-slate-700">
-              {salesData.map((sale) => (
+              {salesData.sort((a, b) => b.date.localeCompare(a.date)).map((sale) => (
                 <tr
                   key={sale.id}
                   onClick={() => openDrawer(sale)}
