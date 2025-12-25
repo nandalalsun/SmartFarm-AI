@@ -18,6 +18,7 @@ export default function Customers() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
   useEffect(() => {
     fetchCustomers();
@@ -88,62 +89,110 @@ export default function Customers() {
 
   return (
     <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      {/* Add Form */}
-      <div className="bg-slate-800/50 backdrop-blur p-6 rounded-xl border border-slate-700 mb-8">
-        <h2 className="text-xl font-semibold text-white mb-4">Add Customer</h2>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Name"
-            value={form.name}
-            onChange={e => setForm({ ...form, name: e.target.value })}
-            className="md:col-span-2 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-          <input
-            type="text"
-            placeholder="Phone"
-            value={form.phone}
-            onChange={e => setForm({ ...form, phone: e.target.value })}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={e => setForm({ ...form, email: e.target.value })}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-          <input
-            type="text"
-            placeholder="Address"
-            value={form.address}
-            onChange={e => setForm({ ...form, address: e.target.value })}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-          <select
-            value={form.customerType}
-            onChange={e => setForm({ ...form, customerType: e.target.value })}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          >
-            <option value="FARMER">FARMER</option>
-            <option value="BUTCHER">BUTCHER</option>
-            <option value="RETAIL">RETAIL</option>
-          </select>
-          <input
-            type="number"
-            placeholder="Credit Limit"
-            value={form.creditLimit}
-            onChange={e => setForm({ ...form, creditLimit: e.target.value })}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-          <button
-            type="submit"
-            className="bg-violet-600 hover:bg-violet-700 text-white font-medium px-6 py-2 rounded-lg transition-colors md:col-span-2"
-          >
-            Add
-          </button>
-        </form>
+      <div className="mb-4 flex justify-end">
+        <button
+          onClick={() => setAddModalOpen(true)}
+          className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2"
+        >
+          + Add Customer
+        </button>
       </div>
+
+      {/* Add Customer Modal */}
+      {addModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl shadow-2xl">
+            {/* Header */}
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-700">
+              <h2 className="text-xl font-semibold text-white">Add Customer</h2>
+              <button
+                onClick={() => setAddModalOpen(false)}
+                className="text-slate-400 hover:text-white text-xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Form */}
+            <form
+              onSubmit={async e => {
+                await handleSubmit(e);
+                setAddModalOpen(false);
+              }}
+              className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+            >
+              <input
+                autoFocus
+                type="text"
+                placeholder="Name"
+                value={form.name}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                className="md:col-span-2 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+
+              <input
+                type="text"
+                placeholder="Phone"
+                value={form.phone}
+                onChange={e => setForm({ ...form, phone: e.target.value })}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+
+              <input
+                type="email"
+                placeholder="Email"
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+
+              <input
+                type="text"
+                placeholder="Address"
+                value={form.address}
+                onChange={e => setForm({ ...form, address: e.target.value })}
+                className="md:col-span-2 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+
+              <select
+                value={form.customerType}
+                onChange={e => setForm({ ...form, customerType: e.target.value })}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+              >
+                <option value="FARMER">FARMER</option>
+                <option value="BUTCHER">BUTCHER</option>
+                <option value="RETAIL">RETAIL</option>
+              </select>
+
+              <input
+                type="number"
+                placeholder="Credit Limit"
+                value={form.creditLimit}
+                onChange={e => setForm({ ...form, creditLimit: e.target.value })}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+
+              {/* Footer */}
+              <div className="md:col-span-2 flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setAddModalOpen(false)}
+                  className="px-5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-medium"
+                >
+                  Add Customer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* List */}
       <div className="bg-slate-800/50 backdrop-blur rounded-xl border border-slate-700 overflow-hidden">
