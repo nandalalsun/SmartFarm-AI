@@ -18,6 +18,7 @@ public class VisionController {
 
     @PostMapping("/extract")
     public ResponseEntity<ExtractedBillDTO> extractBill(@RequestParam("image") MultipartFile image) throws IOException {
+        System.out.println("AI Vision: Extracting bill data...");
         return ResponseEntity.ok(billVisionService.extractBillData(image));
     }
 }
