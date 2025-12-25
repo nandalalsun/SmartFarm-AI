@@ -8,7 +8,7 @@ const ADJUSTMENT_TYPES = [
   { value: 'COUNT_ERROR', label: 'Count Error', color: 'text-orange-400' },
   { value: 'EXPIRY', label: 'Expiry', color: 'text-red-400' },
   { value: 'GIFT', label: 'Gift', color: 'text-blue-400' },
-  { value: 'OTHER', label: 'Other', color: 'text-slate-400' }
+  { value: 'OTHER', label: 'Other', color: 'text-slate-400' },
 ];
 
 export default function StockAdjustmentModal({ isOpen, onClose, product, onSuccess }) {
@@ -19,7 +19,7 @@ export default function StockAdjustmentModal({ isOpen, onClose, product, onSucce
     adjustmentType: 'DAMAGE',
     quantity: 0,
     reason: '',
-    operation: 'remove' // 'add' | 'remove' helper
+    operation: 'remove', // 'add' | 'remove' helper
   });
 
   useEffect(() => {
@@ -36,41 +36,42 @@ export default function StockAdjustmentModal({ isOpen, onClose, product, onSucce
       const res = await api.get(`/inventory/adjustments/${product.id}`);
       setHistory(res.data);
     } catch (err) {
-      console.error("Failed to fetch history", err);
+      console.error('Failed to fetch history', err);
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     console.log('Submitting adjustment:', {
-       productId: product?.id,
-       quantity: form.quantity,
-       type: form.adjustmentType,
-       operation: form.operation
+      productId: product?.id,
+      quantity: form.quantity,
+      type: form.adjustmentType,
+      operation: form.operation,
     });
 
     setLoading(true);
     try {
       const quantityValue = parseInt(form.quantity);
       if (!product || isNaN(quantityValue) || quantityValue === 0) {
-          alert("Invalid quantity or product");
-          setLoading(false);
-          return;
+        alert('Invalid quantity or product');
+        setLoading(false);
+        return;
       }
 
-      const quantity = form.operation === 'add' ? Math.abs(quantityValue) : -Math.abs(quantityValue);
-      
+      const quantity =
+        form.operation === 'add' ? Math.abs(quantityValue) : -Math.abs(quantityValue);
+
       const payload = {
         productId: product.id,
         adjustmentQuantity: quantity,
         adjustmentType: form.adjustmentType,
-        reason: form.reason
+        reason: form.reason,
       };
-      
+
       console.log('Sending payload:', payload);
 
       await api.post('/inventory/adjust', payload);
-      
+
       onSuccess();
       onClose();
     } catch (err) {
@@ -83,7 +84,9 @@ export default function StockAdjustmentModal({ isOpen, onClose, product, onSucce
   };
 
   const currentStock = product?.currentStock || 0;
-  const newStock = product ? currentStock + (form.operation === 'add' ? Math.abs(form.quantity) : -Math.abs(form.quantity)) : 0;
+  const newStock = product
+    ? currentStock + (form.operation === 'add' ? Math.abs(form.quantity) : -Math.abs(form.quantity))
+    : 0;
 
   if (!isOpen || !product) return null;
 
@@ -98,7 +101,10 @@ export default function StockAdjustmentModal({ isOpen, onClose, product, onSucce
               Adjust Stock
             </h2>
             <p className="text-slate-400 text-sm mt-1">
-              {product.name} • Current Stock: <span className="text-white font-mono">{product.currentStock} {product.unit}</span>
+              {product.name} • Current Stock:{' '}
+              <span className="text-white font-mono">
+                {product.currentStock} {product.unit}
+              </span>
             </p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
@@ -111,7 +117,9 @@ export default function StockAdjustmentModal({ isOpen, onClose, product, onSucce
           <button
             onClick={() => setActiveTab('adjust')}
             className={`flex-1 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'adjust' ? 'text-violet-400 border-b-2 border-violet-400 bg-violet-900/10' : 'text-slate-400 hover:text-slate-200'
+              activeTab === 'adjust'
+                ? 'text-violet-400 border-b-2 border-violet-400 bg-violet-900/10'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             New Adjustment
@@ -119,10 +127,12 @@ export default function StockAdjustmentModal({ isOpen, onClose, product, onSucce
           <button
             onClick={() => setActiveTab('history')}
             className={`flex-1 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'history' ? 'text-violet-400 border-b-2 border-violet-400 bg-violet-900/10' : 'text-slate-400 hover:text-slate-200'
+              activeTab === 'history'
+                ? 'text-violet-400 border-b-2 border-violet-400 bg-violet-900/10'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-             History ({history.length})
+            History ({history.length})
           </button>
         </div>
 
@@ -150,14 +160,18 @@ export default function StockAdjustmentModal({ isOpen, onClose, product, onSucce
 
               {/* Quantity Input */}
               <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700">
-                <label className="block text-sm font-medium text-slate-400 mb-4">Quantity Change</label>
+                <label className="block text-sm font-medium text-slate-400 mb-4">
+                  Quantity Change
+                </label>
                 <div className="flex flex-col md:flex-row items-center gap-6">
                   <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-lg border border-slate-700">
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, operation: 'remove' })}
                       className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                        form.operation === 'remove' ? 'bg-red-500/20 text-red-400' : 'text-slate-400 hover:text-white'
+                        form.operation === 'remove'
+                          ? 'bg-red-500/20 text-red-400'
+                          : 'text-slate-400 hover:text-white'
                       }`}
                     >
                       Remove (-)
@@ -166,15 +180,17 @@ export default function StockAdjustmentModal({ isOpen, onClose, product, onSucce
                       type="button"
                       onClick={() => setForm({ ...form, operation: 'add' })}
                       className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                        form.operation === 'add' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-white'
+                        form.operation === 'add'
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'text-slate-400 hover:text-white'
                       }`}
                     >
                       Add (+)
                     </button>
                   </div>
-                  
+
                   <div className="flex-1 w-full">
-                     <input
+                    <input
                       type="number"
                       min="0"
                       value={form.quantity}
@@ -185,24 +201,28 @@ export default function StockAdjustmentModal({ isOpen, onClose, product, onSucce
                 </div>
 
                 <div className="mt-4 flex justify-between items-center text-sm">
-                   <span className="text-slate-400">Resulting Stock:</span>
-                   <div className={`flex items-center gap-2 font-mono font-bold text-lg ${newStock < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                      {product.currentStock} 
-                      <span className="text-slate-500">→</span> 
-                      {newStock}
-                   </div>
+                  <span className="text-slate-400">Resulting Stock:</span>
+                  <div
+                    className={`flex items-center gap-2 font-mono font-bold text-lg ${newStock < 0 ? 'text-red-400' : 'text-emerald-400'}`}
+                  >
+                    {product.currentStock}
+                    <span className="text-slate-500">→</span>
+                    {newStock}
+                  </div>
                 </div>
                 {newStock < 0 && (
-                   <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-900/10 p-2 rounded border border-red-900/20">
-                      <AlertTriangle className="w-4 h-4" />
-                      Cannot reduce stock below zero.
-                   </div>
+                  <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-900/10 p-2 rounded border border-red-900/20">
+                    <AlertTriangle className="w-4 h-4" />
+                    Cannot reduce stock below zero.
+                  </div>
                 )}
               </div>
 
               {/* Reason */}
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Reason (Optional)</label>
+                <label className="block text-sm font-medium text-slate-400 mb-2">
+                  Reason (Optional)
+                </label>
                 <textarea
                   rows="3"
                   value={form.reason}
@@ -233,41 +253,50 @@ export default function StockAdjustmentModal({ isOpen, onClose, product, onSucce
           ) : (
             // History Tab
             <div className="space-y-4">
-               {history.length === 0 ? (
-                 <div className="text-center py-12 text-slate-500">No adjustment history found.</div>
-               ) : (
-                 <div className="relative border-l border-slate-800 ml-4 space-y-8 py-4">
-                    {history.map((record) => (
-                      <div key={record.id} className="relative pl-8">
-                        {/* Timeline dot */}
-                        <div className={`absolute -left-1.5 mt-1.5 w-3 h-3 rounded-full border-2 border-slate-900 ${
-                           record.adjustmentQuantity > 0 ? 'bg-emerald-500' : 'bg-red-500'
-                        }`} />
-                        
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-                          <div>
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
-                               record.adjustmentQuantity > 0 
-                               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                               : 'bg-red-500/10 text-red-400 border-red-500/20'
-                            }`}>
-                               {record.adjustmentType}
-                            </span>
-                            <div className="text-slate-300 text-sm mt-1">{record.reason || 'No reason provided'}</div>
+              {history.length === 0 ? (
+                <div className="text-center py-12 text-slate-500">No adjustment history found.</div>
+              ) : (
+                <div className="relative border-l border-slate-800 ml-4 space-y-8 py-4">
+                  {history.map(record => (
+                    <div key={record.id} className="relative pl-8">
+                      {/* Timeline dot */}
+                      <div
+                        className={`absolute -left-1.5 mt-1.5 w-3 h-3 rounded-full border-2 border-slate-900 ${
+                          record.adjustmentQuantity > 0 ? 'bg-emerald-500' : 'bg-red-500'
+                        }`}
+                      />
+
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
+                        <div>
+                          <span
+                            className={`text-xs font-bold px-2 py-0.5 rounded border ${
+                              record.adjustmentQuantity > 0
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                : 'bg-red-500/10 text-red-400 border-red-500/20'
+                            }`}
+                          >
+                            {record.adjustmentType}
+                          </span>
+                          <div className="text-slate-300 text-sm mt-1">
+                            {record.reason || 'No reason provided'}
                           </div>
-                          <div className="text-right">
-                             <div className={`font-mono font-bold ${record.adjustmentQuantity > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                {record.adjustmentQuantity > 0 ? '+' : ''}{record.adjustmentQuantity}
-                             </div>
-                             <div className="text-xs text-slate-500">
-                                {new Date(record.adjustedAt).toLocaleDateString()}
-                             </div>
+                        </div>
+                        <div className="text-right">
+                          <div
+                            className={`font-mono font-bold ${record.adjustmentQuantity > 0 ? 'text-emerald-400' : 'text-red-400'}`}
+                          >
+                            {record.adjustmentQuantity > 0 ? '+' : ''}
+                            {record.adjustmentQuantity}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {new Date(record.adjustedAt).toLocaleDateString()}
                           </div>
                         </div>
                       </div>
-                    ))}
-                 </div>
-               )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

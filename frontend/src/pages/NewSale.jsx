@@ -120,7 +120,6 @@ const NewSale = () => {
 
   return (
     <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Col: Cart & Product Selection */}
         <div className="lg:col-span-2 space-y-6">

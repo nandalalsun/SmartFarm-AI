@@ -22,8 +22,6 @@ export default function Products() {
     setOpenDropdownId(openDropdownId === productId ? null : productId);
   };
 
-
-
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -63,7 +61,6 @@ export default function Products() {
 
   return (
     <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-
       {/* Add Form */}
       <div className="bg-slate-800/50 backdrop-blur p-6 rounded-xl border border-slate-700 mb-8">
         <h2 className="text-xl font-semibold text-white mb-4">Add Product</h2>
@@ -172,15 +169,15 @@ export default function Products() {
                 {/* Actions Column */}
                 <td className="px-6 py-4 whitespace-nowrap relative">
                   <div className="flex items-center gap-2">
-                     <button
-                        onClick={() => {
-                           setSelectedProduct(p);
-                           setIsAdjustmentModalOpen(true);
-                        }}
-                        className="text-violet-400 hover:text-violet-300 hover:bg-violet-900/20 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border border-violet-500/20"
-                     >
-                        Adjust Stock
-                     </button>
+                    <button
+                      onClick={() => {
+                        setSelectedProduct(p);
+                        setIsAdjustmentModalOpen(true);
+                      }}
+                      className="text-violet-400 hover:text-violet-300 hover:bg-violet-900/20 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border border-violet-500/20"
+                    >
+                      Adjust Stock
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -218,14 +215,14 @@ export default function Products() {
         type={toast.type}
         onClose={() => setToast({ message: '', type: '' })}
       />
-      
-      <StockAdjustmentModal 
+
+      <StockAdjustmentModal
         isOpen={isAdjustmentModalOpen}
         onClose={() => setIsAdjustmentModalOpen(false)}
         product={selectedProduct}
         onSuccess={() => {
-           fetchProducts();
-           setToast({ message: 'Stock adjusted successfully', type: 'success' });
+          fetchProducts();
+          setToast({ message: 'Stock adjusted successfully', type: 'success' });
         }}
       />
     </div>

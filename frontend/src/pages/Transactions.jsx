@@ -55,7 +55,8 @@ export default function Transactions() {
       const payload = {
         productId: purchaseForm.productId,
         quantity: parseInt(purchaseForm.quantity),
-        totalCost: (parseFloat(purchaseForm.quantity) || 0) * (parseFloat(purchaseForm.unitPrice) || 0),
+        totalCost:
+          (parseFloat(purchaseForm.quantity) || 0) * (parseFloat(purchaseForm.unitPrice) || 0),
         supplierName: purchaseForm.supplierName || null,
         customerId: purchaseForm.customerId || null,
       };
@@ -119,7 +120,6 @@ export default function Transactions() {
 
   return (
     <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-
       {/* Tabs */}
       <div className="flex space-x-4 mb-6">
         <button
@@ -144,11 +144,11 @@ export default function Transactions() {
         </button>
         <div className="flex-grow flex justify-end pr-2">
           <button
-          onClick={() => setPurchaseModalOpen(true)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-        >
-          + New Purchase
-        </button>
+            onClick={() => setPurchaseModalOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            + New Purchase
+          </button>
         </div>
       </div>
 
@@ -491,7 +491,11 @@ export default function Transactions() {
                 <div>
                   <label className="block text-slate-400 text-sm mb-1">Total Cost</label>
                   <div className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-slate-300">
-                    ${((parseFloat(purchaseForm.quantity) || 0) * (parseFloat(purchaseForm.unitPrice) || 0)).toFixed(2)}
+                    $
+                    {(
+                      (parseFloat(purchaseForm.quantity) || 0) *
+                      (parseFloat(purchaseForm.unitPrice) || 0)
+                    ).toFixed(2)}
                   </div>
                 </div>
               </div>

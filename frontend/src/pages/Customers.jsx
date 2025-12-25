@@ -16,6 +16,8 @@ export default function Customers() {
   const [profitModalOpen, setProfitModalOpen] = useState(false);
   const [profitData, setProfitData] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('ALL');
 
   useEffect(() => {
     fetchCustomers();
@@ -29,6 +31,19 @@ export default function Customers() {
       console.error('Failed to fetch customers', err);
     }
   };
+
+  const filteredCustomers = customers.filter(c => {
+    const q = search.toLowerCase();
+
+    const matchesSearch =
+      c.name?.toLowerCase().includes(q) ||
+      c.phone?.toLowerCase().includes(q) ||
+      c.email?.toLowerCase().includes(q);
+
+    const matchesType = typeFilter === 'ALL' || c.customerType === typeFilter;
+
+    return matchesSearch && matchesType;
+  });
 
   const handleViewProfit = async customer => {
     setSelectedCustomer(customer);
@@ -73,7 +88,6 @@ export default function Customers() {
 
   return (
     <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      
       {/* Add Form */}
       <div className="bg-slate-800/50 backdrop-blur p-6 rounded-xl border border-slate-700 mb-8">
         <h2 className="text-xl font-semibold text-white mb-4">Add Customer</h2>
@@ -133,6 +147,40 @@ export default function Customers() {
 
       {/* List */}
       <div className="bg-slate-800/50 backdrop-blur rounded-xl border border-slate-700 overflow-hidden">
+        {/* Search & Filter */}
+        <div className="flex flex-col md:flex-row gap-4 p-4 bg-slate-900 border-b border-slate-700">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Search by name, phone, or email..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-10 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+            />
+            <span className="absolute left-3 top-2.5 text-slate-400">🔍</span>
+
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-2.5 text-slate-400 hover:text-white"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <select
+            value={typeFilter}
+            onChange={e => setTypeFilter(e.target.value)}
+            className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+          >
+            <option value="ALL">All Types</option>
+            <option value="FARMER">FARMER</option>
+            <option value="BUTCHER">BUTCHER</option>
+            <option value="RETAIL">RETAIL</option>
+          </select>
+        </div>
+
         <table className="min-w-full divide-y divide-slate-700">
           <thead className="bg-slate-900">
             <tr>
@@ -154,7 +202,7 @@ export default function Customers() {
             </tr>
           </thead>
           <tbody className="bg-slate-800 divide-y divide-slate-700">
-            {customers.map(c => (
+            {filteredCustomers.map(c => (
               <tr key={c.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-white">{c.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-slate-300">{c.customerType}</td>
