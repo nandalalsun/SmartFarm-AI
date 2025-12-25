@@ -17,6 +17,7 @@ export default function Products() {
   });
   const [toast, setToast] = useState({ message: '', type: '' });
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [addProductModalOpen, setAddProductModalOpen] = useState(false);
 
   const toggleDropdown = productId => {
     setOpenDropdownId(openDropdownId === productId ? null : productId);
@@ -61,68 +62,115 @@ export default function Products() {
 
   return (
     <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      {/* Add Form */}
-      <div className="bg-slate-800/50 backdrop-blur p-6 rounded-xl border border-slate-700 mb-8">
-        <h2 className="text-xl font-semibold text-white mb-4">Add Product</h2>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-6 gap-4">
-          <select
-            value={form.category}
-            onChange={e => setForm({ ...form, category: e.target.value })}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          >
-            <option value="FEED">FEED</option>
-            <option value="MEDICINE">MEDICINE</option>
-            <option value="LIVE_CHICK">LIVE CHICK</option>
-            <option value="MEAT">MEAT</option>
-            <option value="EGGS">EGGS</option>
-            <option value="OTHER">OTHER</option>
-          </select>
-          <input
-            type="text"
-            placeholder="Name"
-            value={form.name}
-            onChange={e => setForm({ ...form, name: e.target.value })}
-            className="md:col-span-2 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-          <input
-            type="number"
-            placeholder="Purchase Cost"
-            value={form.costPrice}
-            onChange={e => setForm({ ...form, costPrice: e.target.value })}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-          <input
-            type="number"
-            placeholder="Selling Price"
-            value={form.sellingPrice}
-            onChange={e => setForm({ ...form, sellingPrice: e.target.value })}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-          {/* Row 2 */}
-          <select
-            value={form.unit}
-            onChange={e => setForm({ ...form, unit: e.target.value })}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          >
-            <option value="KG">KG</option>
-            <option value="BAG">BAG</option>
-            <option value="PIECE">PIECE</option>
-          </select>
-          <input
-            type="number"
-            placeholder="Stock"
-            value={form.currentStock}
-            onChange={e => setForm({ ...form, currentStock: e.target.value })}
-            className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-          <button
-            type="submit"
-            className="bg-violet-600 hover:bg-violet-700 text-white font-medium px-6 py-2 rounded-lg transition-colors md:col-span-4"
-          >
-            Add
-          </button>
-        </form>
+      <div className="mb-4 flex justify-end">
+        <button
+          onClick={() => setAddProductModalOpen(true)}
+          className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2"
+        >
+          + Add Product
+        </button>
       </div>
+      {/* Add Product Modal */}
+      {addProductModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-3xl shadow-2xl">
+            {/* Header */}
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-700">
+              <h2 className="text-xl font-semibold text-white">Add Product</h2>
+              <button
+                onClick={() => setAddProductModalOpen(false)}
+                className="text-slate-400 hover:text-white text-xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Form */}
+            <form
+              onSubmit={async e => {
+                await handleSubmit(e);
+                setAddProductModalOpen(false);
+              }}
+              className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4"
+            >
+              {/* Row 1 */}
+              <select
+                value={form.category}
+                onChange={e => setForm({ ...form, category: e.target.value })}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+              >
+                <option value="FEED">FEED</option>
+                <option value="MEDICINE">MEDICINE</option>
+                <option value="LIVE_CHICK">LIVE CHICK</option>
+                <option value="MEAT">MEAT</option>
+                <option value="EGGS">EGGS</option>
+                <option value="OTHER">OTHER</option>
+              </select>
+
+              <input
+                type="text"
+                placeholder="Product Name"
+                value={form.name}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+
+              <select
+                value={form.unit}
+                onChange={e => setForm({ ...form, unit: e.target.value })}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+              >
+                <option value="KG">KG</option>
+                <option value="BAG">BAG</option>
+                <option value="PIECE">PIECE</option>
+              </select>
+
+              {/* Row 2 */}
+              <input
+                type="number"
+                placeholder="Purchase Cost"
+                value={form.costPrice}
+                onChange={e => setForm({ ...form, costPrice: e.target.value })}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+
+              <input
+                type="number"
+                placeholder="Selling Price"
+                value={form.sellingPrice}
+                onChange={e => setForm({ ...form, sellingPrice: e.target.value })}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+
+              <input
+                type="number"
+                placeholder="Stock"
+                value={form.currentStock}
+                onChange={e => setForm({ ...form, currentStock: e.target.value })}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+
+              {/* Actions */}
+              <div className="md:col-span-3 flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setAddProductModalOpen(false)}
+                  className="px-5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-medium"
+                >
+                  Add Product
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* List */}
       <div className="bg-slate-800/50 backdrop-blur rounded-xl border border-slate-700 overflow-hidden">
