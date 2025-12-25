@@ -22,6 +22,7 @@ public class FinanceService {
     @Autowired private SaleRepository saleRepository;
     @Autowired private PurchaseRepository purchaseRepository;
     @Autowired private CreditLedgerRepository creditLedgerRepository;
+    @Autowired private PaymentTransactionRepository paymentTransactionRepository;
 
     @Transactional
     public Sale createSale(SaleRequestDTO request) {
@@ -112,6 +113,7 @@ public class FinanceService {
         return savedSale;
     }
 
+    
     @Transactional
     public Purchase createPurchase(PurchaseDTO request) {
         Product product = productRepository.findById(request.getProductId())
@@ -119,17 +121,94 @@ public class FinanceService {
 
         // Increment Stock
         product.setCurrentStock(product.getCurrentStock() + request.getQuantity());
-        // Update Cost Price if needed? For now just keep existing or update manual. 
-        // Let's NOT auto-update avg cost for simplicity unless asked.
         productRepository.save(product);
 
         Purchase purchase = new Purchase();
         purchase.setProduct(product);
-        purchase.setSupplierName(request.getSupplierName());
         purchase.setQuantity(request.getQuantity());
         purchase.setTotalCost(request.getTotalCost());
         
+        if (request.getCustomerId() != null) {
+            Customer customer = customerRepository.findById(request.getCustomerId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+            
+            // Validate Farmer
+            if (!"FARMER".equals(customer.getCustomerType())) {
+                throw new IllegalArgumentException("Only FARMER customers can be linked to purchases");
+            }
+
+            purchase.setCustomer(customer);
+
+            // Update Ledger (Credit)
+            CreditLedger ledger = new CreditLedger();
+            ledger.setCustomer(customer);
+            ledger.setPurchase(purchase);
+            ledger.setOriginalDebt(request.getTotalCost().negate()); // Negative debt = Credit
+            ledger.setCurrentBalance(request.getTotalCost().negate());
+            ledger.setStatus("CREDIT");
+            ledger.setDueDate(LocalDate.now()); // Immediate?
+            creditLedgerRepository.save(ledger);
+
+            // Update Customer Balance (Subtract cost from balance)
+            customer.setCurrentTotalBalance(customer.getCurrentTotalBalance().subtract(request.getTotalCost()));
+            
+            // Check for Profit Payout (Negative Balance)
+            if (customer.getCurrentTotalBalance().compareTo(BigDecimal.ZERO) < 0) {
+                 BigDecimal profitToPay = customer.getCurrentTotalBalance().abs();
+                 
+                 // Create Payment Transaction
+                 PaymentTransaction txn = new PaymentTransaction();
+                 txn.setCustomer(customer);
+                 txn.setAmountPaid(profitToPay);
+                 txn.setPaymentMethod("PROFIT_SETTLEMENT");
+                 // txn.setSale(null); // Optional now
+                 paymentTransactionRepository.save(txn);
+                 
+                 // Reset Balance to 0 (since we paid it out)
+                 customer.setCurrentTotalBalance(BigDecimal.ZERO);
+                 
+                 // Mark ledger as CLEARED? Or keep track? 
+                 // For simplicity, we just zero out the balance and assume paid. 
+            }
+            customerRepository.save(customer);
+
+        } else {
+            purchase.setSupplierName(request.getSupplierName());
+        }
+        
         return purchaseRepository.save(purchase);
+    }
+
+    public Map<String, Object> getFarmerProfit(java.util.UUID customerId) {
+        // Simple calculation: Total Delivery Value - Total Input Debt
+        // But actually, we already track net balance. 
+        // Profit = Deliveries (Purchases) - Inputs (Sales)
+        // But inputs might be paid or unpaid.
+        
+        // Let's aggregate from history?
+        List<Purchase> deliveries = purchaseRepository.findAll().stream()
+                .filter(p -> p.getCustomer() != null && p.getCustomer().getId().equals(customerId))
+                .toList();
+                
+        List<Sale> inputs = saleRepository.findAll().stream()
+                .filter(s -> s.getCustomer().getId().equals(customerId))
+                .toList();
+                
+        BigDecimal deliveriesValue = deliveries.stream()
+                .map(Purchase::getTotalCost)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                
+        BigDecimal inputsCost = inputs.stream()
+                .map(Sale::getTotalBillAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                
+        BigDecimal profit = deliveriesValue.subtract(inputsCost);
+        
+        return Map.of(
+            "inputsCost", inputsCost,
+            "deliveriesValue", deliveriesValue,
+            "profit", profit
+        );
     }
 
     public List<SaleHistoryDTO> getSalesHistory() {
@@ -181,7 +260,11 @@ public class FinanceService {
         PurchaseHistoryDTO dto = new PurchaseHistoryDTO();
         dto.setId(purchase.getId());
         dto.setDate(purchase.getPurchaseDate());
-        dto.setSupplierName(purchase.getSupplierName());
+        if (purchase.getSupplierName() != null) {
+            dto.setSupplierName(purchase.getSupplierName());
+        } else if (purchase.getCustomer() != null) {
+            dto.setSupplierName(purchase.getCustomer().getName() + " (Farmer)");
+        }
         dto.setProductName(purchase.getProduct().getName());
         dto.setQuantity(purchase.getQuantity());
         dto.setTotalCost(purchase.getTotalCost());

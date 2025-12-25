@@ -13,7 +13,7 @@ public class PaymentTransaction {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(optional = false)
+    @ManyToOne
     private Sale sale;
 
     @ManyToOne(optional = false)

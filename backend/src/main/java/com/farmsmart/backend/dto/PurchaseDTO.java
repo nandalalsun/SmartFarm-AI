@@ -7,6 +7,7 @@ import java.util.UUID;
 @Data
 public class PurchaseDTO {
     private UUID productId;
+    private UUID customerId;
     private String supplierName;
     private Integer quantity;
     private BigDecimal totalCost;

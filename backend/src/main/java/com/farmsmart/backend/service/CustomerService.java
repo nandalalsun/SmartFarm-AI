@@ -16,6 +16,9 @@ public class CustomerService {
     }
 
     public Customer createCustomer(Customer customer) {
+        if (customer.getPhone() != null && repository.existsByPhone(customer.getPhone())) {
+            throw new RuntimeException("Phone number already exists");
+        }
         return repository.save(customer);
     }
 }

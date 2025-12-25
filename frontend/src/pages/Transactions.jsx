@@ -11,7 +11,61 @@ export default function Transactions() {
   useEffect(() => {
     fetchSalesHistory();
     fetchPurchaseHistory();
+    fetchFarmers();
   }, []);
+
+  const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+  const [farmers, setFarmers] = useState([]);
+  const [purchaseForm, setPurchaseForm] = useState({
+    productId: '',
+    quantity: '',
+    totalCost: '',
+    customerId: '', // Optional for Farmer
+    supplierName: '' // Optional for non-Farmer
+  });
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+      // Fetch products for the dropdown
+      const loadProducts = async () => {
+          try {
+              const res = await api.get('/products');
+              setProducts(res.data);
+          } catch(e) { console.error(e); }
+      };
+      loadProducts();
+  }, []);
+
+  const fetchFarmers = async () => {
+    try {
+      const res = await api.get('/customers');
+      // Filter only farmers
+      setFarmers(res.data.filter(c => c.customerType === 'FARMER'));
+    } catch (err) {
+      console.error("Failed to fetch farmers", err);
+    }
+  };
+
+  const handleCreatePurchase = async (e) => {
+      e.preventDefault();
+      try {
+          const payload = {
+              productId: purchaseForm.productId,
+              quantity: parseInt(purchaseForm.quantity),
+              totalCost: parseFloat(purchaseForm.totalCost),
+              supplierName: purchaseForm.supplierName || null,
+              customerId: purchaseForm.customerId || null
+          };
+          await api.post('/purchases', payload);
+          setPurchaseModalOpen(false);
+          setPurchaseForm({ productId: '', quantity: '', totalCost: '', customerId: '', supplierName: '' });
+          fetchPurchaseHistory(); // Refresh list
+          // Also refresh sales history if it affects credits?
+      } catch (err) {
+          console.error("Failed to create purchase", err);
+          alert("Failed to create purchase: " + (err.response?.data?.message || err.message));
+      }
+  };
 
   const fetchSalesHistory = async () => {
     try {
@@ -52,7 +106,15 @@ export default function Transactions() {
 
   return (
     <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold text-white mb-8">Transaction History</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-white">Transaction History</h1>
+        <button
+          onClick={() => setPurchaseModalOpen(true)}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+        >
+          + New Purchase
+        </button>
+      </div>
 
       {/* Tabs */}
       <div className="flex space-x-4 mb-6">
@@ -275,6 +337,126 @@ export default function Transactions() {
             </div>
           </div>
         </>
+      )}
+      {/* Purchase Modal */}
+      {purchaseModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-4">New Purchase</h2>
+            <form onSubmit={handleCreatePurchase} className="space-y-4">
+              <div>
+                <label className="block text-slate-400 text-sm mb-1">Product</label>
+                <select
+                  required
+                  value={purchaseForm.productId}
+                  onChange={e => setPurchaseForm({...purchaseForm, productId: e.target.value})}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                >
+                  <option value="">Select Product...</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} (Stock: {p.currentStock})</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-slate-400 text-sm mb-1">Source Type</label>
+                <div className="flex space-x-4 mb-2">
+                   <label className="flex items-center space-x-2 text-white cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="sourceType" 
+                        checked={!purchaseForm.customerId} 
+                        onChange={() => setPurchaseForm({...purchaseForm, customerId: '', supplierName: ''})} 
+                      />
+                      <span>External Supplier</span>
+                   </label>
+                   <label className="flex items-center space-x-2 text-white cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="sourceType"
+                        checked={!!purchaseForm.customerId}
+                        onChange={() => setPurchaseForm({...purchaseForm, customerId: 'select', supplierName: ''})}
+                      />
+                      <span>Farmer</span>
+                   </label>
+                </div>
+              </div>
+
+              {!purchaseForm.customerId && (
+                 <div>
+                    <label className="block text-slate-400 text-sm mb-1">Supplier Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={purchaseForm.supplierName}
+                      onChange={e => setPurchaseForm({...purchaseForm, supplierName: e.target.value})}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    />
+                 </div>
+              )}
+
+              {purchaseForm.customerId !== '' && (
+                 <div>
+                    <label className="block text-slate-400 text-sm mb-1">Select Farmer</label>
+                    <select
+                      required
+                      value={purchaseForm.customerId === 'select' ? '' : purchaseForm.customerId}
+                      onChange={e => setPurchaseForm({...purchaseForm, customerId: e.target.value})}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    >
+                      <option value="">Choose Farmer...</option>
+                      {farmers.map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                    </select>
+                 </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                 <div>
+                    <label className="block text-slate-400 text-sm mb-1">Quantity</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={purchaseForm.quantity}
+                      onChange={e => setPurchaseForm({...purchaseForm, quantity: e.target.value})}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-slate-400 text-sm mb-1">Total Cost</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={purchaseForm.totalCost}
+                      onChange={e => setPurchaseForm({...purchaseForm, totalCost: e.target.value})}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                    />
+                 </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setPurchaseModalOpen(false)}
+                  className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2 rounded-lg font-medium"
+                >
+                  Confirm Purchase
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -10,9 +10,13 @@ export default function Customers() {
     email: '', 
     address: '', 
     customerType: 'FARMER', 
+    customerType: 'FARMER', 
     creditLimit: '' 
   });
   const [toast, setToast] = useState({ message: '', type: '' });
+  const [profitModalOpen, setProfitModalOpen] = useState(false);
+  const [profitData, setProfitData] = useState(null);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   useEffect(() => {
     fetchCustomers();
@@ -24,6 +28,18 @@ export default function Customers() {
       setCustomers(res.data);
     } catch (err) {
       console.error("Failed to fetch customers", err);
+    }
+  };
+
+  const handleViewProfit = async (customer) => {
+    setSelectedCustomer(customer);
+    try {
+      const res = await api.get(`/customers/${customer.id}/profit`);
+      setProfitData(res.data);
+      setProfitModalOpen(true);
+    } catch (err) {
+      console.error("Failed to fetch profit", err);
+      setToast({ message: 'Failed to fetch profit report', type: 'error' });
     }
   };
 
@@ -40,7 +56,9 @@ export default function Customers() {
       setToast({ message: '✓ Customer added successfully!', type: 'success' });
     } catch (err) {
       console.error("Failed to add customer", err);
-      setToast({ message: err.response?.data?.message || 'Failed to add customer', type: 'error' });
+      // Backend throws RuntimeException which might come as 500
+      const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to add customer (check if phone exists)';
+      setToast({ message: msg, type: 'error' });
     }
   };
 
@@ -110,6 +128,7 @@ export default function Customers() {
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Phone</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Balance</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-slate-800 divide-y divide-slate-700">
@@ -118,11 +137,21 @@ export default function Customers() {
                 <td className="px-6 py-4 whitespace-nowrap text-white">{c.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-slate-300">{c.phone}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-emerald-400 font-mono">${c.currentTotalBalance}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-right">
+                  {c.customerType === 'FARMER' && (
+                    <button 
+                      onClick={() => handleViewProfit(c)}
+                      className="text-violet-400 hover:text-violet-300 font-medium text-sm"
+                    >
+                      View Profit
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
             {customers.length === 0 && (
               <tr>
-                <td colSpan="3" className="px-6 py-4 text-center text-slate-500">No customers found.</td>
+                <td colSpan="4" className="px-6 py-4 text-center text-slate-500">No customers found.</td>
               </tr>
             )}
           </tbody>
@@ -134,6 +163,47 @@ export default function Customers() {
         type={toast.type} 
         onClose={() => setToast({ message: '', type: '' })} 
       />
+
+      {/* Profit Modal */}
+      {profitModalOpen && profitData && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+               <h2 className="text-xl font-bold text-white">Profit Report</h2>
+               <button onClick={() => setProfitModalOpen(false)} className="text-slate-400 hover:text-white">×</button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-slate-400 text-sm">Customer</p>
+              <p className="text-white font-medium text-lg">{selectedCustomer.name}</p>
+            </div>
+
+            <div className="space-y-4">
+               <div className="bg-slate-800 p-4 rounded-lg flex justify-between items-center">
+                  <span className="text-slate-300">Total Inputs (Bought)</span>
+                  <span className="text-red-400 font-mono font-medium">-${profitData.inputsCost}</span>
+               </div>
+               <div className="bg-slate-800 p-4 rounded-lg flex justify-between items-center">
+                  <span className="text-slate-300">Deliveries (Sold to us)</span>
+                  <span className="text-emerald-400 font-mono font-medium">+${profitData.deliveriesValue}</span>
+               </div>
+               <div className="border-t border-slate-700 pt-4 flex justify-between items-center">
+                  <span className="text-white font-bold">Net Profit</span>
+                  <span className={`font-mono font-bold text-xl ${profitData.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    ${profitData.profit}
+                  </span>
+               </div>
+            </div>
+            
+            <button 
+               onClick={() => setProfitModalOpen(false)}
+               className="w-full mt-6 bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-lg font-medium"
+            >
+               Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

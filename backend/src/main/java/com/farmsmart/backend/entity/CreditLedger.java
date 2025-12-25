@@ -16,8 +16,11 @@ public class CreditLedger {
     @ManyToOne(optional = false)
     private Customer customer;
 
-    @OneToOne(optional = false)
+    @OneToOne
     private Sale sale;
+
+    @ManyToOne
+    private Purchase purchase;
 
     private BigDecimal originalDebt;
     private BigDecimal currentBalance; // Remaining debt to pay

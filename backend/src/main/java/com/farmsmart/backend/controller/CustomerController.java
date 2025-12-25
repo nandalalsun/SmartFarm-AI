@@ -12,6 +12,8 @@ import java.util.List;
 public class CustomerController {
     @Autowired
     private CustomerService service;
+    @Autowired
+    private com.farmsmart.backend.service.FinanceService financeService;
 
     @GetMapping
     public List<Customer> getAll() {
@@ -21,5 +23,10 @@ public class CustomerController {
     @PostMapping
     public Customer create(@RequestBody Customer customer) {
         return service.createCustomer(customer);
+    }
+
+    @GetMapping("/{id}/profit")
+    public java.util.Map<String, Object> getProfit(@PathVariable java.util.UUID id) {
+        return financeService.getFarmerProfit(id);
     }
 }

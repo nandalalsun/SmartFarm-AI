@@ -16,6 +16,9 @@ public class Purchase {
     @ManyToOne(optional = false)
     private Product product;
 
+    @ManyToOne
+    private Customer customer;
+
     private String supplierName;
     private Integer quantity;
     private BigDecimal totalCost;
