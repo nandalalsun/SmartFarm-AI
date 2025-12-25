@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 import Toast from '../components/Toast';
+import StockAdjustmentModal from '../components/StockAdjustmentModal';
 
 export default function Products() {
   const [products, setProducts] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [form, setForm] = useState({
     name: '',
     costPrice: '',
@@ -19,33 +22,7 @@ export default function Products() {
     setOpenDropdownId(openDropdownId === productId ? null : productId);
   };
 
-  const handleDelete = async productId => {
-    try {
-      await api.delete(`/products/${productId}`);
-      fetchProducts();
-      setToast({ message: '✓ Product deleted successfully!', type: 'success' });
-    } catch (err) {
-      console.error('Failed to delete product', err);
-      setToast({
-        message: err.response?.data?.message || 'Failed to delete product',
-        type: 'error',
-      });
-    }
-  };
 
-  const handleUpdate = async productId => {
-    try {
-      await api.put(`/products/${productId}`, form);
-      fetchProducts();
-      setToast({ message: '✓ Product updated successfully!', type: 'success' });
-    } catch (err) {
-      console.error('Failed to update product', err);
-      setToast({
-        message: err.response?.data?.message || 'Failed to update product',
-        type: 'error',
-      });
-    }
-  };
 
   useEffect(() => {
     fetchProducts();
@@ -102,6 +79,7 @@ export default function Products() {
             <option value="LIVE_CHICK">LIVE CHICK</option>
             <option value="MEAT">MEAT</option>
             <option value="EGGS">EGGS</option>
+            <option value="OTHER">OTHER</option>
           </select>
           <input
             type="text"
@@ -194,83 +172,17 @@ export default function Products() {
 
                 {/* Actions Column */}
                 <td className="px-6 py-4 whitespace-nowrap relative">
-                  <button
-                    onClick={() => toggleDropdown(p.id)}
-                    className="p-2 rounded-lg hover:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500"
-                  >
-                    <svg
-                      className="w-5 h-5 text-slate-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                      />
-                    </svg>
-                  </button>
-
-                  {/* Dropdown - only show for this product */}
-                  {openDropdownId === p.id && (
-                    <>
-                      <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-lg bg-slate-800 border border-slate-700 z-20">
-                        <div className="py-1">
-                          <button
-                            onClick={() => {
-                              handleUpdate(p.id);
-                              setOpenDropdownId(null);
-                            }}
-                            className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-slate-700 hover:text-white flex items-center gap-3"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                            Edit Product
-                          </button>
-                        </div>
-                        <div className="py-1 border-t border-slate-700">
-                          <button
-                            onClick={() => {
-                              handleDelete(p.id);
-                              setOpenDropdownId(null);
-                            }}
-                            className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-900/20 hover:text-red-300 flex items-center gap-3"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2.171 2.171 0 0116.138 21H7.862a2.171 2.171 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                            Delete Product
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Click outside to close */}
-                      <div className="fixed inset-0 z-10" onClick={() => setOpenDropdownId(null)} />
-                    </>
-                  )}
+                  <div className="flex items-center gap-2">
+                     <button
+                        onClick={() => {
+                           setSelectedProduct(p);
+                           setIsAdjustmentModalOpen(true);
+                        }}
+                        className="text-violet-400 hover:text-violet-300 hover:bg-violet-900/20 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border border-violet-500/20"
+                     >
+                        Adjust Stock
+                     </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -306,6 +218,16 @@ export default function Products() {
         message={toast.message}
         type={toast.type}
         onClose={() => setToast({ message: '', type: '' })}
+      />
+      
+      <StockAdjustmentModal 
+        isOpen={isAdjustmentModalOpen}
+        onClose={() => setIsAdjustmentModalOpen(false)}
+        product={selectedProduct}
+        onSuccess={() => {
+           fetchProducts();
+           setToast({ message: 'Stock adjusted successfully', type: 'success' });
+        }}
       />
     </div>
   );

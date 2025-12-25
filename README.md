@@ -36,6 +36,7 @@ erDiagram
 
     PRODUCT ||--o{ SALE_ITEM : "included in"
     PRODUCT ||--o{ PURCHASE : "restocked by"
+    PRODUCT ||--o{ STOCK_ADJUSTMENT : "adjusted for"
 
     SALE ||--|{ SALE_ITEM : "contains"
     SALE ||--o{ PAYMENT_TRANSACTION : "paid via"
@@ -55,7 +56,6 @@ erDiagram
         decimal current_total_balance
         timestamp registered_at
     }
-
     PRODUCT {
         uuid id PK
         string name
@@ -65,7 +65,6 @@ erDiagram
         string unit "KG / BAG / TRAY / PIECE"
         int current_stock
     }
-
     SALE {
         uuid id PK
         uuid customer_id FK
@@ -76,7 +75,6 @@ erDiagram
         string sale_channel "POS / WHATSAPP / FIELD"
         timestamp created_at
     }
-
     SALE_ITEM {
         uuid id PK
         uuid sale_id FK
@@ -85,7 +83,6 @@ erDiagram
         decimal unit_price "Price at time of sale"
         decimal line_total
     }
-
     PAYMENT_TRANSACTION {
         uuid id PK
         uuid sale_id FK
@@ -94,7 +91,6 @@ erDiagram
         string payment_method "CASH / CHECK / TRANSFER"
         timestamp payment_date
     }
-
     CREDIT_LEDGER {
         uuid id PK
         uuid customer_id FK
@@ -106,7 +102,6 @@ erDiagram
         string status "ACTIVE / CLEARED / CREDIT"
         string remarks
     }
-
     PURCHASE {
         uuid id PK
         uuid product_id FK
@@ -116,13 +111,21 @@ erDiagram
         decimal total_cost
         timestamp purchase_date
     }
-
     BILL_IMAGE {
         uuid id PK
         uuid sale_id FK
         string s3_url
         json extracted_json "AI output stored here"
         timestamp uploaded_at
+    }
+    STOCK_ADJUSTMENT {
+        uuid id PK
+        uuid product_id FK
+        int adjustment_quantity "Positive to add, negative to deduct"
+        string adjustment_type "DAMAGE / THEFT / COUNT_ERROR / EXPIRY / GIFT / OTHER"
+        string reason
+        timestamp adjusted_at
+        uuid adjusted_by_user_id FK "Optional, if multi-user"
     }
 ```
 
