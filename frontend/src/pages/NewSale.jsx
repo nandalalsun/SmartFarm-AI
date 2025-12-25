@@ -69,36 +69,6 @@ const NewSale = () => {
     setCart(newCart);
   };
 
-  // Handle Extracted Bill Data from Scanner
-  // Note: This feature is currently disabled as location.state is not available
-  // To enable, import useLocation from react-router-dom and uncomment the code below
-  /*
-  useEffect(() => {
-    if (location.state?.extractedBill) {
-      const { items: extractedItems } = location.state.extractedBill;
-      
-      // Map extracted items to form structure (might need more robust matching strategy later)
-      // For now, we just add them as line items. User has to select the actual Product ID manually 
-      // or we try to match by name if possible.
-      
-      // Let's try to match by name
-      const matchedItems = extractedItems.map(extItem => {
-        const matchedProduct = products.find(p => p.name.toLowerCase().includes(extItem.productName.toLowerCase()));
-        return {
-          productId: matchedProduct ? matchedProduct.id : '', // Pre-select if found
-          productName: extItem.productName, // Keep original name for reference if not found
-          quantity: extItem.quantity || 1,
-          unitPrice: extItem.unitPrice || 0,
-          lineTotal: extItem.lineTotal || 0
-        };
-      });
-
-      setCart(matchedItems);
-      // We could also try to find the customer similarly or just leave it blank
-    }
-  }, [location.state, products]);
-  */
-
   const calculateTotal = () => {
     return cart.reduce((acc, item) => acc + item.lineTotal, 0);
   };
@@ -149,10 +119,7 @@ const NewSale = () => {
   const selectedCustomer = customers.find(c => c.id === formData.customerId);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white">New Sale</h1>
-      </div>
+    <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Col: Cart & Product Selection */}

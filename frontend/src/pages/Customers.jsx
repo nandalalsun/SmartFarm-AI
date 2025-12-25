@@ -73,8 +73,7 @@ export default function Customers() {
 
   return (
     <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold text-white mb-8">Customers</h1>
-
+      
       {/* Add Form */}
       <div className="bg-slate-800/50 backdrop-blur p-6 rounded-xl border border-slate-700 mb-8">
         <h2 className="text-xl font-semibold text-white mb-4">Add Customer</h2>

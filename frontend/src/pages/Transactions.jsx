@@ -119,9 +119,6 @@ export default function Transactions() {
 
   return (
     <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-white">Transaction History</h1>
-      </div>
 
       {/* Tabs */}
       <div className="flex space-x-4 mb-6">

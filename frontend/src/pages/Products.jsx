@@ -63,7 +63,6 @@ export default function Products() {
 
   return (
     <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold text-white mb-8">Products</h1>
 
       {/* Add Form */}
       <div className="bg-slate-800/50 backdrop-blur p-6 rounded-xl border border-slate-700 mb-8">
