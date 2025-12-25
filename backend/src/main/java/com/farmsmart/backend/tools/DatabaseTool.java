@@ -69,15 +69,4 @@ public class DatabaseTool {
             return "Error querying database: " + e.getMessage();
         }
     }
-    
-    /**
-     * DEPRECATED: Old method that accepted raw SQL (kept for reference, not exposed to LLM)
-     * This method is no longer a @Tool and will not be called by the AI.
-     */
-    @Deprecated
-    private String executeQuery_DEPRECATED(String sql) {
-        throw new UnsupportedOperationException(
-            "Direct SQL execution is no longer supported. Use queryDatabase() with natural language instead."
-        );
-    }
 }
