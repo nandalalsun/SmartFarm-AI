@@ -19,6 +19,7 @@ export default function Transactions() {
   const [purchaseForm, setPurchaseForm] = useState({
     productId: '',
     quantity: '',
+    unitPrice: '',
     totalCost: '',
     customerId: '', // Optional for Farmer
     supplierName: '', // Optional for non-Farmer
@@ -54,7 +55,7 @@ export default function Transactions() {
       const payload = {
         productId: purchaseForm.productId,
         quantity: parseInt(purchaseForm.quantity),
-        totalCost: parseFloat(purchaseForm.totalCost),
+        totalCost: (parseFloat(purchaseForm.quantity) || 0) * (parseFloat(purchaseForm.unitPrice) || 0),
         supplierName: purchaseForm.supplierName || null,
         customerId: purchaseForm.customerId || null,
       };
@@ -479,16 +480,22 @@ export default function Transactions() {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 text-sm mb-1">Total Cost</label>
+                  <label className="block text-slate-400 text-sm mb-1">Unit Price</label>
                   <input
                     type="number"
                     required
                     min="0"
                     step="0.01"
-                    value={purchaseForm.totalCost}
-                    onChange={e => setPurchaseForm({ ...purchaseForm, totalCost: e.target.value })}
+                    value={purchaseForm.unitPrice}
+                    onChange={e => setPurchaseForm({ ...purchaseForm, unitPrice: e.target.value })}
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
                   />
+                </div>
+                <div>
+                  <label className="block text-slate-400 text-sm mb-1">Total Cost</label>
+                  <div className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-slate-300">
+                    ${((parseFloat(purchaseForm.quantity) || 0) * (parseFloat(purchaseForm.unitPrice) || 0)).toFixed(2)}
+                  </div>
                 </div>
               </div>
 
