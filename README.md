@@ -32,15 +32,18 @@ erDiagram
     CUSTOMER ||--o{ SALE : "places"
     CUSTOMER ||--o{ CREDIT_LEDGER : "has history of"
     CUSTOMER ||--o{ PAYMENT_TRANSACTION : "makes"
-    
+    CUSTOMER ||--o{ PURCHASE : "supplies"
+
     PRODUCT ||--o{ SALE_ITEM : "included in"
     PRODUCT ||--o{ PURCHASE : "restocked by"
-    
+
     SALE ||--|{ SALE_ITEM : "contains"
     SALE ||--o{ PAYMENT_TRANSACTION : "paid via"
     SALE ||--o| CREDIT_LEDGER : "generates debt"
     SALE ||--o| BILL_IMAGE : "documented by"
-    
+
+    PURCHASE ||--o| CREDIT_LEDGER : "generates credit"
+
     CUSTOMER {
         uuid id PK
         string name
@@ -95,18 +98,20 @@ erDiagram
     CREDIT_LEDGER {
         uuid id PK
         uuid customer_id FK
-        uuid sale_id FK
-        decimal original_debt
-        decimal current_balance
+        uuid sale_id FK "Optional"
+        uuid purchase_id FK "Optional, for credits from deliveries"
+        decimal original_debt "Can be negative for credits"
+        decimal current_balance "Can be negative"
         timestamp due_date
-        string status "ACTIVE / CLEARED"
+        string status "ACTIVE / CLEARED / CREDIT"
         string remarks
     }
 
     PURCHASE {
         uuid id PK
         uuid product_id FK
-        string supplier_name
+        uuid customer_id FK "Optional, for farmer deliveries"
+        string supplier_name "Optional, for non-farmers"
         int quantity
         decimal total_cost
         timestamp purchase_date
