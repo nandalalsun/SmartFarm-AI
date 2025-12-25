@@ -1,5 +1,15 @@
 -- Clean up existing data (Safe Truncate)
-TRUNCATE TABLE sale_item, payment_transaction, credit_ledger, sale, purchase, customer, product CASCADE;
+TRUNCATE TABLE sale_item, payment_transaction, credit_ledger, sale, purchase, customer, product, bill_staging_queue CASCADE;
+
+DROP TABLE IF EXISTS bill_staging_queue;
+CREATE TABLE bill_staging_queue (
+    id UUID PRIMARY KEY,
+    image_url TEXT,
+    extracted_json JSONB,
+    status VARCHAR(20) DEFAULT 'PENDING',
+    created_at TIMESTAMP DEFAULT NOW(),
+    user_id UUID
+);
 
 -- Insert Products
 INSERT INTO product (id, name, category, cost_price, selling_price, unit, current_stock) VALUES

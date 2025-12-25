@@ -141,6 +141,9 @@ export default function Customers() {
                 Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
+                Customer Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                 Phone
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
@@ -155,6 +158,7 @@ export default function Customers() {
             {customers.map(c => (
               <tr key={c.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-white">{c.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-slate-300">{c.customerType}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-slate-300">{c.phone}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-emerald-400 font-mono">
                   ${c.currentTotalBalance}

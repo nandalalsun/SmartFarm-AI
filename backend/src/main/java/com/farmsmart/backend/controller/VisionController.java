@@ -1,6 +1,5 @@
 package com.farmsmart.backend.controller;
 
-import com.farmsmart.backend.dto.ExtractedBillDTO;
 import com.farmsmart.backend.service.BillVisionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +16,7 @@ public class VisionController {
     private BillVisionService billVisionService;
 
     @PostMapping("/extract")
-    public ResponseEntity<ExtractedBillDTO> extractBill(@RequestParam("image") MultipartFile image) throws IOException {
+    public ResponseEntity<com.farmsmart.backend.dto.BillAnalysisResponse> extractBill(@RequestParam("image") MultipartFile image) throws IOException {
         System.out.println("AI Vision: Extracting bill data...");
         return ResponseEntity.ok(billVisionService.extractBillData(image));
     }

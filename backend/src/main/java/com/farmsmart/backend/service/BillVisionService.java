@@ -1,6 +1,5 @@
 package com.farmsmart.backend.service;
 
-import com.farmsmart.backend.dto.ExtractedBillDTO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.data.message.AiMessage;
@@ -23,15 +22,42 @@ public class BillVisionService {
     private final ObjectMapper objectMapper;
     
     private static final String SYSTEM_PROMPT = """
-            You are a professional invoice parser. Your output must be a single JSON object. 
-            Do not include markdown formatting, backticks (```), or any conversational text. 
-            If a field is missing, use null.
-            JSON Schema:
+            You are an expert ERP Data Clerk for a Poultry Farm.
+            Your goal is to extract data from a bill image and format it for a Spring Boot/PostgreSQL backend.
+
+            Context:
+            - Current Farm Products: [Feed, Medicine, Live Chick, Meat, Eggs]
+            - Transaction Types: SALE (we sell to others) or PURCHASE (we buy/restock).
+
+            Task:
+            1. Analyze the image and decide if it is a SALE or PURCHASE.
+               - Hint: If the farm's name is in the header, it's a SALE. If a supplier name is in the header, it's a PURCHASE.
+            2. Extract the date. If it's in BS (Bikram Sambat), note that.
+            3. Extract items: Quantity, Product Name, Unit Price, and Total.
+            4. Try to match the 'customer_name' to a 'customer_type' (FARMER, BUTCHER, or RETAIL).
+
+            Return ONLY a JSON object:
             {
-               "customer_name": string,
-               "date": string,
-               "items": [{ "product_name": string, "quantity": number, "unit_price": number, "line_total": number }],
-               "total_amount": number
+              "suggested_type": "SALE | PURCHASE",
+              "confidence_score": 0.0 to 1.0,
+              "data": {
+                "date": "YYYY-MM-DD",
+                "customer_name": "string",
+                "customer_type_suggestion": "FARMER | BUTCHER | RETAIL",
+                "items": [
+                  {
+                    "product_name": "string",
+                    "quantity": number,
+                    "unit": "KG | BAG | TRAY | PIECE",
+                    "unit_price": decimal,
+                    "line_total": decimal
+                  }
+                ],
+                "total_amount": decimal,
+                "tax_amount": decimal,
+                "payment_method_hint": "CASH | CHECK | TRANSFER"
+              },
+              "review_required_fields": ["list of fields that were blurry or uncertain"]
             }
             """;
 
@@ -40,7 +66,7 @@ public class BillVisionService {
         this.objectMapper = new ObjectMapper();
     }
 
-    public ExtractedBillDTO extractBillData(MultipartFile image) throws IOException {
+    public com.farmsmart.backend.dto.BillAnalysisResponse extractBillData(MultipartFile image) throws IOException {
         String mimeType = image.getContentType() != null ? image.getContentType() : "image/jpeg";
         String base64 = Base64.getEncoder().encodeToString(image.getBytes());
         
@@ -56,7 +82,7 @@ public class BillVisionService {
         if (responseText != null && !responseText.isEmpty()) {
             try {
                 String jsonStr = cleanJson(responseText);
-                return objectMapper.readValue(jsonStr, ExtractedBillDTO.class);
+                return objectMapper.readValue(jsonStr, com.farmsmart.backend.dto.BillAnalysisResponse.class);
             } catch (JsonProcessingException e) {
                 System.err.println("Failed to parse AI response: " + responseText);
                 throw new RuntimeException("Failed to parse bill data", e);
