@@ -21,19 +21,21 @@ export default function Transactions() {
     quantity: '',
     totalCost: '',
     customerId: '', // Optional for Farmer
-    supplierName: '' // Optional for non-Farmer
+    supplierName: '', // Optional for non-Farmer
   });
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-      // Fetch products for the dropdown
-      const loadProducts = async () => {
-          try {
-              const res = await api.get('/products');
-              setProducts(res.data);
-          } catch(e) { console.error(e); }
-      };
-      loadProducts();
+    // Fetch products for the dropdown
+    const loadProducts = async () => {
+      try {
+        const res = await api.get('/products');
+        setProducts(res.data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    loadProducts();
   }, []);
 
   const fetchFarmers = async () => {
@@ -42,29 +44,35 @@ export default function Transactions() {
       // Filter only farmers
       setFarmers(res.data.filter(c => c.customerType === 'FARMER'));
     } catch (err) {
-      console.error("Failed to fetch farmers", err);
+      console.error('Failed to fetch farmers', err);
     }
   };
 
-  const handleCreatePurchase = async (e) => {
-      e.preventDefault();
-      try {
-          const payload = {
-              productId: purchaseForm.productId,
-              quantity: parseInt(purchaseForm.quantity),
-              totalCost: parseFloat(purchaseForm.totalCost),
-              supplierName: purchaseForm.supplierName || null,
-              customerId: purchaseForm.customerId || null
-          };
-          await api.post('/purchases', payload);
-          setPurchaseModalOpen(false);
-          setPurchaseForm({ productId: '', quantity: '', totalCost: '', customerId: '', supplierName: '' });
-          fetchPurchaseHistory(); // Refresh list
-          // Also refresh sales history if it affects credits?
-      } catch (err) {
-          console.error("Failed to create purchase", err);
-          alert("Failed to create purchase: " + (err.response?.data?.message || err.message));
-      }
+  const handleCreatePurchase = async e => {
+    e.preventDefault();
+    try {
+      const payload = {
+        productId: purchaseForm.productId,
+        quantity: parseInt(purchaseForm.quantity),
+        totalCost: parseFloat(purchaseForm.totalCost),
+        supplierName: purchaseForm.supplierName || null,
+        customerId: purchaseForm.customerId || null,
+      };
+      await api.post('/purchases', payload);
+      setPurchaseModalOpen(false);
+      setPurchaseForm({
+        productId: '',
+        quantity: '',
+        totalCost: '',
+        customerId: '',
+        supplierName: '',
+      });
+      fetchPurchaseHistory(); // Refresh list
+      // Also refresh sales history if it affects credits?
+    } catch (err) {
+      console.error('Failed to create purchase', err);
+      alert('Failed to create purchase: ' + (err.response?.data?.message || err.message));
+    }
   };
 
   const fetchSalesHistory = async () => {
@@ -85,7 +93,7 @@ export default function Transactions() {
     }
   };
 
-  const openDrawer = (record) => {
+  const openDrawer = record => {
     setSelectedRecord(record);
     setDrawerOpen(true);
   };
@@ -95,12 +103,16 @@ export default function Transactions() {
     setSelectedRecord(null);
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = status => {
     switch (status) {
-      case 'FULLY_PAID': return 'text-green-400 bg-green-400/10';
-      case 'PARTIAL': return 'text-yellow-400 bg-yellow-400/10';
-      case 'UNPAID': return 'text-red-400 bg-red-400/10';
-      default: return 'text-gray-400 bg-gray-400/10';
+      case 'FULLY_PAID':
+        return 'text-green-400 bg-green-400/10';
+      case 'PARTIAL':
+        return 'text-yellow-400 bg-yellow-400/10';
+      case 'UNPAID':
+        return 'text-red-400 bg-red-400/10';
+      default:
+        return 'text-gray-400 bg-gray-400/10';
     }
   };
 
@@ -146,44 +158,62 @@ export default function Transactions() {
           <table className="min-w-full divide-y divide-slate-700">
             <thead className="bg-slate-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Paid</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Balance</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                  Customer
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                  Total
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                  Paid
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                  Balance
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody className="bg-slate-800 divide-y divide-slate-700">
-              {salesData.sort((a, b) => b.date.localeCompare(a.date)).map((sale) => (
-                <tr
-                  key={sale.id}
-                  onClick={() => openDrawer(sale)}
-                  className="hover:bg-slate-700 cursor-pointer transition-colors"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-slate-300">
-                    {new Date(sale.date).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-white">{sale.customerName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-emerald-400 font-mono">
-                    ${sale.totalBillAmount}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-slate-300 font-mono">
-                    ${sale.initialPaidAmount}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-slate-300 font-mono">
-                    ${sale.remainingBalance}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(sale.paymentStatus)}`}>
-                      {sale.paymentStatus}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {salesData
+                .sort((a, b) => b.date.localeCompare(a.date))
+                .map(sale => (
+                  <tr
+                    key={sale.id}
+                    onClick={() => openDrawer(sale)}
+                    className="hover:bg-slate-700 cursor-pointer transition-colors"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-slate-300">
+                      {new Date(sale.date).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-white">{sale.customerName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-emerald-400 font-mono">
+                      ${sale.totalBillAmount}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-slate-300 font-mono">
+                      ${sale.initialPaidAmount}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-slate-300 font-mono">
+                      ${sale.remainingBalance}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(sale.paymentStatus)}`}
+                      >
+                        {sale.paymentStatus}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               {salesData.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="px-6 py-4 text-center text-slate-500">No sales found.</td>
+                  <td colSpan="6" className="px-6 py-4 text-center text-slate-500">
+                    No sales found.
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -197,22 +227,38 @@ export default function Transactions() {
           <table className="min-w-full divide-y divide-slate-700">
             <thead className="bg-slate-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Supplier</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Product</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Quantity</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Cost</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                  Supplier
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                  Product
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                  Quantity
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                  Cost
+                </th>
               </tr>
             </thead>
             <tbody className="bg-slate-800 divide-y divide-slate-700">
-              {purchasesData.map((purchase) => (
+              {purchasesData.map(purchase => (
                 <tr key={purchase.id} className="hover:bg-slate-700 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap text-slate-300">
                     {new Date(purchase.date).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-white">{purchase.supplierName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-slate-300">{purchase.productName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-slate-300">{purchase.quantity}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-white">
+                    {purchase.supplierName}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-slate-300">
+                    {purchase.productName}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-slate-300">
+                    {purchase.quantity}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-red-400 font-mono">
                     ${purchase.totalCost}
                   </td>
@@ -220,7 +266,9 @@ export default function Transactions() {
               ))}
               {purchasesData.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="px-6 py-4 text-center text-slate-500">No purchases found.</td>
+                  <td colSpan="5" className="px-6 py-4 text-center text-slate-500">
+                    No purchases found.
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -232,10 +280,7 @@ export default function Transactions() {
       {drawerOpen && selectedRecord && (
         <>
           {/* Overlay */}
-          <div
-            onClick={closeDrawer}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
-          />
+          <div onClick={closeDrawer} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" />
 
           {/* Drawer */}
           <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-slate-900 shadow-2xl z-50 overflow-y-auto">
@@ -244,14 +289,9 @@ export default function Transactions() {
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-2">Sale Details</h2>
-                  <p className="text-slate-400">
-                    {new Date(selectedRecord.date).toLocaleString()}
-                  </p>
+                  <p className="text-slate-400">{new Date(selectedRecord.date).toLocaleString()}</p>
                 </div>
-                <button
-                  onClick={closeDrawer}
-                  className="text-slate-400 hover:text-white text-2xl"
-                >
+                <button onClick={closeDrawer} className="text-slate-400 hover:text-white text-2xl">
                   ×
                 </button>
               </div>
@@ -277,9 +317,7 @@ export default function Transactions() {
                           {item.quantity} × ${item.unitPrice}
                         </p>
                       </div>
-                      <p className="text-emerald-400 font-mono font-medium">
-                        ${item.lineTotal}
-                      </p>
+                      <p className="text-emerald-400 font-mono font-medium">${item.lineTotal}</p>
                     </div>
                   ))}
                 </div>
@@ -316,7 +354,8 @@ export default function Transactions() {
                         <div className="w-2 h-2 bg-emerald-400 rounded-full" />
                         <div className="flex-1">
                           <p className="text-white font-medium">
-                            ${txn.amountPaid} <span className="text-slate-400 text-sm">({txn.paymentMethod})</span>
+                            ${txn.amountPaid}{' '}
+                            <span className="text-slate-400 text-sm">({txn.paymentMethod})</span>
                           </p>
                           <p className="text-sm text-slate-400">
                             {new Date(txn.paymentDate).toLocaleString()}
@@ -330,7 +369,9 @@ export default function Transactions() {
 
               {/* Status Badge */}
               <div className="flex justify-center">
-                <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(selectedRecord.paymentStatus)}`}>
+                <span
+                  className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(selectedRecord.paymentStatus)}`}
+                >
                   {selectedRecord.paymentStatus}
                 </span>
               </div>
@@ -349,94 +390,104 @@ export default function Transactions() {
                 <select
                   required
                   value={purchaseForm.productId}
-                  onChange={e => setPurchaseForm({...purchaseForm, productId: e.target.value})}
+                  onChange={e => setPurchaseForm({ ...purchaseForm, productId: e.target.value })}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
                 >
                   <option value="">Select Product...</option>
                   {products.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} (Stock: {p.currentStock})</option>
+                    <option key={p.id} value={p.id}>
+                      {p.name} (Stock: {p.currentStock})
+                    </option>
                   ))}
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-slate-400 text-sm mb-1">Source Type</label>
                 <div className="flex space-x-4 mb-2">
-                   <label className="flex items-center space-x-2 text-white cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="sourceType" 
-                        checked={!purchaseForm.customerId} 
-                        onChange={() => setPurchaseForm({...purchaseForm, customerId: '', supplierName: ''})} 
-                      />
-                      <span>External Supplier</span>
-                   </label>
-                   <label className="flex items-center space-x-2 text-white cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="sourceType"
-                        checked={!!purchaseForm.customerId}
-                        onChange={() => setPurchaseForm({...purchaseForm, customerId: 'select', supplierName: ''})}
-                      />
-                      <span>Farmer</span>
-                   </label>
+                  <label className="flex items-center space-x-2 text-white cursor-pointer">
+                    <input
+                      type="radio"
+                      name="sourceType"
+                      checked={!purchaseForm.customerId}
+                      onChange={() =>
+                        setPurchaseForm({ ...purchaseForm, customerId: '', supplierName: '' })
+                      }
+                    />
+                    <span>External Supplier</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-white cursor-pointer">
+                    <input
+                      type="radio"
+                      name="sourceType"
+                      checked={!!purchaseForm.customerId}
+                      onChange={() =>
+                        setPurchaseForm({ ...purchaseForm, customerId: 'select', supplierName: '' })
+                      }
+                    />
+                    <span>Farmer</span>
+                  </label>
                 </div>
               </div>
 
               {!purchaseForm.customerId && (
-                 <div>
-                    <label className="block text-slate-400 text-sm mb-1">Supplier Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={purchaseForm.supplierName}
-                      onChange={e => setPurchaseForm({...purchaseForm, supplierName: e.target.value})}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
-                    />
-                 </div>
+                <div>
+                  <label className="block text-slate-400 text-sm mb-1">Supplier Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={purchaseForm.supplierName}
+                    onChange={e =>
+                      setPurchaseForm({ ...purchaseForm, supplierName: e.target.value })
+                    }
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                  />
+                </div>
               )}
 
               {purchaseForm.customerId !== '' && (
-                 <div>
-                    <label className="block text-slate-400 text-sm mb-1">Select Farmer</label>
-                    <select
-                      required
-                      value={purchaseForm.customerId === 'select' ? '' : purchaseForm.customerId}
-                      onChange={e => setPurchaseForm({...purchaseForm, customerId: e.target.value})}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
-                    >
-                      <option value="">Choose Farmer...</option>
-                      {farmers.map(f => (
-                        <option key={f.id} value={f.id}>{f.name}</option>
-                      ))}
-                    </select>
-                 </div>
+                <div>
+                  <label className="block text-slate-400 text-sm mb-1">Select Farmer</label>
+                  <select
+                    required
+                    value={purchaseForm.customerId === 'select' ? '' : purchaseForm.customerId}
+                    onChange={e => setPurchaseForm({ ...purchaseForm, customerId: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                  >
+                    <option value="">Choose Farmer...</option>
+                    {farmers.map(f => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
-                 <div>
-                    <label className="block text-slate-400 text-sm mb-1">Quantity</label>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      value={purchaseForm.quantity}
-                      onChange={e => setPurchaseForm({...purchaseForm, quantity: e.target.value})}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
-                    />
-                 </div>
-                 <div>
-                    <label className="block text-slate-400 text-sm mb-1">Total Cost</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      step="0.01"
-                      value={purchaseForm.totalCost}
-                      onChange={e => setPurchaseForm({...purchaseForm, totalCost: e.target.value})}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
-                    />
-                 </div>
+                <div>
+                  <label className="block text-slate-400 text-sm mb-1">Quantity</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={purchaseForm.quantity}
+                    onChange={e => setPurchaseForm({ ...purchaseForm, quantity: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 text-sm mb-1">Total Cost</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={purchaseForm.totalCost}
+                    onChange={e => setPurchaseForm({ ...purchaseForm, totalCost: e.target.value })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white"
+                  />
+                </div>
               </div>
 
               <div className="flex space-x-3 pt-4">

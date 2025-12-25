@@ -9,13 +9,12 @@ const KPICard = ({ title, value, change, icon: Icon, prefix = '' }) => {
         <div>
           <p className="text-slate-400 text-sm">{title}</p>
           <h3 className="text-2xl font-bold">
-            {prefix}{value?.toLocaleString() ?? 0}
+            {prefix}
+            {value?.toLocaleString() ?? 0}
           </h3>
         </div>
 
-        {Icon && (
-          <Icon className="w-5 h-5 text-slate-400" />
-        )}
+        {Icon && <Icon className="w-5 h-5 text-slate-400" />}
       </div>
 
       {typeof change === 'number' && (

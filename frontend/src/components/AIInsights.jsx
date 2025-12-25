@@ -9,7 +9,7 @@ export default function AIInsights({ insights }) {
         <h3 className="text-lg font-bold text-[#39e09bff]">AI Intelligence</h3>
         <span className="text-xs text-slate-100 ml-auto">Live</span>
       </div>
-      
+
       <div className="space-y-4">
         {insights && insights.length > 0 ? (
           insights.map((insight, index) => (

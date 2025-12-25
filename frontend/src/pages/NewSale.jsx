@@ -13,7 +13,7 @@ const NewSale = () => {
     customerId: '',
     saleChannel: 'POS',
     paymentMethod: 'CASH',
-    initialPaidAmount: ''
+    initialPaidAmount: '',
   });
 
   const [selectedProduct, setSelectedProduct] = useState('');
@@ -27,22 +27,25 @@ const NewSale = () => {
     try {
       const [custRes, prodRes] = await Promise.all([
         axios.get('/customers'),
-        axios.get('/products')
+        axios.get('/products'),
       ]);
       setCustomers(custRes.data);
       setProducts(prodRes.data);
     } catch (err) {
-      console.error("Error fetching data:", err);
+      console.error('Error fetching data:', err);
     }
   };
 
   const addToCart = () => {
     if (!selectedProduct) return;
     const product = products.find(p => p.id === selectedProduct);
-    
+
     // Check Stock locally
     if (product.currentStock < quantity) {
-      setToast({ message: `Insufficient stock! Only ${product.currentStock} ${product.unit} available.`, type: 'error' });
+      setToast({
+        message: `Insufficient stock! Only ${product.currentStock} ${product.unit} available.`,
+        type: 'error',
+      });
       return;
     }
 
@@ -51,7 +54,7 @@ const NewSale = () => {
       name: product.name,
       unitPrice: product.sellingPrice,
       quantity: parseInt(quantity),
-      lineTotal: product.sellingPrice * parseInt(quantity)
+      lineTotal: product.sellingPrice * parseInt(quantity),
     };
 
     setCart([...cart, newItem]);
@@ -60,16 +63,19 @@ const NewSale = () => {
     setQuantity(1);
   };
 
-  const removeFromCart = (index) => {
+  const removeFromCart = index => {
     const newCart = [...cart];
     newCart.splice(index, 1);
     setCart(newCart);
   };
 
   // Handle Extracted Bill Data from Scanner
+  // Note: This feature is currently disabled as location.state is not available
+  // To enable, import useLocation from react-router-dom and uncomment the code below
+  /*
   useEffect(() => {
     if (location.state?.extractedBill) {
-      const { items: extractedItems, totalAmount } = location.state.extractedBill;
+      const { items: extractedItems } = location.state.extractedBill;
       
       // Map extracted items to form structure (might need more robust matching strategy later)
       // For now, we just add them as line items. User has to select the actual Product ID manually 
@@ -91,6 +97,7 @@ const NewSale = () => {
       // We could also try to find the customer similarly or just leave it blank
     }
   }, [location.state, products]);
+  */
 
   const calculateTotal = () => {
     return cart.reduce((acc, item) => acc + item.lineTotal, 0);
@@ -102,14 +109,14 @@ const NewSale = () => {
     return Math.max(0, total - paid);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setLoading(true);
     setToast({ message: '', type: '' });
 
     try {
-      if (cart.length === 0) throw new Error("Cart is empty");
-      if (!formData.customerId) throw new Error("Select a customer");
+      if (cart.length === 0) throw new Error('Cart is empty');
+      if (!formData.customerId) throw new Error('Select a customer');
 
       const payload = {
         customerId: formData.customerId,
@@ -117,10 +124,10 @@ const NewSale = () => {
         paymentMethod: formData.paymentMethod,
         saleChannel: formData.saleChannel,
         items: cart.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice
-        }))
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        })),
       };
 
       await axios.post('/sales', payload);
@@ -130,7 +137,10 @@ const NewSale = () => {
       // Refresh Data (Stock might have changed)
       fetchData();
     } catch (err) {
-      setToast({ message: err.response?.data?.message || err.message || 'Failed to save sale', type: 'error' });
+      setToast({
+        message: err.response?.data?.message || err.message || 'Failed to save sale',
+        type: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -147,12 +157,11 @@ const NewSale = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Col: Cart & Product Selection */}
         <div className="lg:col-span-2 space-y-6">
-          
           {/* Add Product Card */}
           <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
             <h2 className="text-xl font-semibold text-white mb-4">Add Items</h2>
             <div className="flex flex-col md:flex-row gap-4">
-              <select 
+              <select
                 className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white"
                 value={selectedProduct}
                 onChange={e => setSelectedProduct(e.target.value)}
@@ -164,14 +173,14 @@ const NewSale = () => {
                   </option>
                 ))}
               </select>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min="1"
                 className="w-24 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white"
                 value={quantity}
                 onChange={e => setQuantity(e.target.value)}
               />
-              <button 
+              <button
                 type="button"
                 onClick={addToCart}
                 className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2 rounded-lg"
@@ -186,10 +195,18 @@ const NewSale = () => {
             <table className="w-full">
               <thead className="bg-slate-900/50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Product</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Qty</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Price</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">Total</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                    Product
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                    Qty
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                    Price
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase">
+                    Total
+                  </th>
                   <th className="px-6 py-3"></th>
                 </tr>
               </thead>
@@ -201,7 +218,10 @@ const NewSale = () => {
                     <td className="px-6 py-4 text-slate-300">₹{item.unitPrice}</td>
                     <td className="px-6 py-4 text-violet-400 font-medium">₹{item.lineTotal}</td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => removeFromCart(idx)} className="text-red-400 hover:text-red-300">
+                      <button
+                        onClick={() => removeFromCart(idx)}
+                        className="text-red-400 hover:text-red-300"
+                      >
                         Remove
                       </button>
                     </td>
@@ -209,7 +229,9 @@ const NewSale = () => {
                 ))}
                 {cart.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="px-6 py-8 text-center text-slate-500">Cart is empty</td>
+                    <td colSpan="5" className="px-6 py-8 text-center text-slate-500">
+                      Cart is empty
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -221,14 +243,16 @@ const NewSale = () => {
         <div className="space-y-6">
           <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
             <h2 className="text-xl font-semibold text-white mb-4">Customer Details</h2>
-            <select 
+            <select
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white mb-4"
               value={formData.customerId}
-              onChange={e => setFormData({...formData, customerId: e.target.value})}
+              onChange={e => setFormData({ ...formData, customerId: e.target.value })}
             >
               <option value="">Select Customer...</option>
               {customers.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
               ))}
             </select>
 
@@ -254,7 +278,7 @@ const NewSale = () => {
 
           <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
             <h2 className="text-xl font-semibold text-white mb-4">Payment</h2>
-            
+
             <div className="space-y-4">
               <div className="flex justify-between text-lg font-medium text-white p-4 bg-slate-900 rounded-lg">
                 <span>Grand Total</span>
@@ -263,10 +287,10 @@ const NewSale = () => {
 
               <div>
                 <label className="block text-sm text-slate-400 mb-1">Payment Method</label>
-                <select 
+                <select
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white"
                   value={formData.paymentMethod}
-                  onChange={e => setFormData({...formData, paymentMethod: e.target.value})}
+                  onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })}
                 >
                   <option value="CASH">CASH</option>
                   <option value="CHECK">CHECK</option>
@@ -276,24 +300,26 @@ const NewSale = () => {
 
               <div>
                 <label className="block text-sm text-slate-400 mb-1">Paid Amount (₹)</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white"
                   value={formData.initialPaidAmount}
-                  onChange={e => setFormData({...formData, initialPaidAmount: e.target.value})}
+                  onChange={e => setFormData({ ...formData, initialPaidAmount: e.target.value })}
                   placeholder="Enter amount paid now"
                 />
               </div>
 
               <div className="flex justify-between text-sm pt-2">
                 <span className="text-slate-400">Remaining Due:</span>
-                <span className={`font-medium ${calculateRemaining() > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                <span
+                  className={`font-medium ${calculateRemaining() > 0 ? 'text-red-400' : 'text-green-400'}`}
+                >
                   ₹{calculateRemaining()}
                 </span>
               </div>
 
-              <button 
-                onClick={handleSubmit} 
+              <button
+                onClick={handleSubmit}
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 rounded-lg mt-4 disabled:opacity-50"
                 disabled={loading || cart.length === 0}
               >
@@ -304,10 +330,10 @@ const NewSale = () => {
         </div>
       </div>
 
-      <Toast 
-        message={toast.message} 
-        type={toast.type} 
-        onClose={() => setToast({ message: '', type: '' })} 
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ message: '', type: '' })}
       />
     </div>
   );
