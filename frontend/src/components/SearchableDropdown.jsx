@@ -23,7 +23,7 @@ export default function SearchableDropdown({
 
   // Close dropdown on outside click
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handleClickOutside = event => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
       }
@@ -36,7 +36,7 @@ export default function SearchableDropdown({
     opt.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSelect = (optionId) => {
+  const handleSelect = optionId => {
     onChange(optionId);
     setIsOpen(false);
   };
@@ -49,7 +49,7 @@ export default function SearchableDropdown({
         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-violet-500 outline-none"
         value={searchTerm}
         onFocus={() => setIsOpen(true)}
-        onChange={(e) => {
+        onChange={e => {
           setSearchTerm(e.target.value);
           if (e.target.value === '') {
             onChange(''); // Clear selection if input is cleared
@@ -60,16 +60,25 @@ export default function SearchableDropdown({
       {isOpen && (
         <ul className="absolute z-50 top-full mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {allOptionLabel && (
-            <li className="px-4 py-2 text-sm text-slate-300 hover:bg-violet-600 hover:text-white cursor-pointer" onClick={() => handleSelect('')}>
+            <li
+              className="px-4 py-2 text-sm text-slate-300 hover:bg-violet-600 hover:text-white cursor-pointer"
+              onClick={() => handleSelect('')}
+            >
               {allOptionLabel}
             </li>
           )}
+          {filteredOptions.length === 0 && !allOptionLabel && (
+            <li className="px-4 py-2 text-sm text-slate-500">No options found.</li>
+          )}
           {filteredOptions.map(opt => (
-            <li key={opt.id} className="px-4 py-2 text-sm text-slate-300 hover:bg-violet-600 hover:text-white cursor-pointer" onClick={() => handleSelect(opt.id)}>
-              {opt.name}
+            <li
+              key={opt.id}
+              className="px-4 py-2 text-sm text-slate-300 hover:bg-violet-600 hover:text-white cursor-pointer"
+              onClick={() => handleSelect(opt.id)}
+            >
+              {opt.renderLabel ? opt.renderLabel() : opt.name}
             </li>
           ))}
-          {filteredOptions.length === 0 && !allOptionLabel && <li className="px-4 py-2 text-sm text-slate-500">No options found.</li>}
         </ul>
       )}
     </div>

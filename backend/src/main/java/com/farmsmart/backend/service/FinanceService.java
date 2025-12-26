@@ -291,4 +291,71 @@ public class FinanceService {
                 "netProfit", netProfit
         );
     }
+
+    public List<UnifiedTransactionDTO> getUnifiedTransactions(TransactionFilterDTO filter) {
+        List<UnifiedTransactionDTO> unifiedList = new ArrayList<>();
+        
+        // 1. Fetch Sales
+        List<Sale> sales = saleRepository.findAll(com.farmsmart.backend.repository.SaleSpecification.filterBy(filter));
+        
+        for (Sale sale : sales) {
+            UnifiedTransactionDTO dto = new UnifiedTransactionDTO();
+            dto.setId(sale.getId());
+            dto.setDate(sale.getCreatedAt());
+            dto.setType("SALE");
+            dto.setCustomerName(sale.getCustomer().getName());
+            dto.setCustomerPhone(sale.getCustomer().getPhone());
+            dto.setAmount(sale.getTotalBillAmount());
+            
+            BigDecimal totalPaid = sale.getPaymentTransactions() != null ? 
+                sale.getPaymentTransactions().stream()
+                    .map(PaymentTransaction::getAmountPaid)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add) 
+                : BigDecimal.ZERO;
+            
+            if (totalPaid.compareTo(BigDecimal.ZERO) == 0 && sale.getInitialPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
+                totalPaid = sale.getInitialPaidAmount();
+            }
+            
+            dto.setPaidAmount(totalPaid);
+            dto.setBalance(sale.getRemainingBalance());
+            dto.setStatus(sale.getPaymentStatus());
+            unifiedList.add(dto);
+        }
+
+        // 2. Fetch Purchases (Logic: If we are not filtering for SALES only)
+        // For now, assume we fetch all matches and filter by type in frontend or backend if needed.
+        // We'll fetch purchases if filter allows.
+        
+        List<Purchase> purchases = purchaseRepository.findAll(PurchaseSpecification.filterBy(filter));
+        
+        for (Purchase purchase : purchases) {
+            UnifiedTransactionDTO dto = new UnifiedTransactionDTO();
+            dto.setId(purchase.getId());
+            dto.setDate(purchase.getPurchaseDate());
+            dto.setType("PURCHASE");
+            
+            if (purchase.getCustomer() != null) {
+                dto.setCustomerName(purchase.getCustomer().getName());
+                dto.setCustomerPhone(purchase.getCustomer().getPhone());
+            } else {
+                dto.setCustomerName(purchase.getSupplierName() != null ? purchase.getSupplierName() : "Unknown Supplier");
+                dto.setCustomerPhone("N/A");
+            }
+            
+            dto.setAmount(purchase.getTotalCost());
+            dto.setPaidAmount(purchase.getTotalCost()); 
+            dto.setBalance(BigDecimal.ZERO);
+            dto.setStatus("COMPLETED");
+            unifiedList.add(dto);
+        }
+
+        // 3. Sort by Date Descending
+        unifiedList.sort((a, b) -> {
+            if (a.getDate() == null || b.getDate() == null) return 0;
+            return b.getDate().compareTo(a.getDate());
+        });
+        
+        return unifiedList;
+    }
 }

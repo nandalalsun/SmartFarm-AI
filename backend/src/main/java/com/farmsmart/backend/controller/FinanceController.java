@@ -39,6 +39,23 @@ public class FinanceController {
         filter.setToDate(toDate);
         filter.setPaymentStatus(paymentStatus);
 
+
         return ResponseEntity.ok(reportService.generateTransactionReport(filter));
+    }
+
+    @GetMapping("/ledger")
+    public ResponseEntity<java.util.List<com.farmsmart.backend.dto.UnifiedTransactionDTO>> getLedger(
+            @RequestParam(required = false) UUID customerId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
+            @RequestParam(required = false) String paymentStatus) {
+        
+        TransactionFilterDTO filter = new TransactionFilterDTO();
+        filter.setCustomerId(customerId);
+        filter.setFromDate(fromDate);
+        filter.setToDate(toDate);
+        filter.setPaymentStatus(paymentStatus);
+
+        return ResponseEntity.ok(financeService.getUnifiedTransactions(filter));
     }
 }
