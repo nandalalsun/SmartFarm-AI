@@ -205,13 +205,13 @@ export default function Products() {
                   {p.currentStock} {p.unit && <span className="text-slate-500">({p.unit})</span>}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-slate-400 font-mono">
-                  ${p.costPrice?.toFixed(2)}
+                  ₹{p.costPrice?.toFixed(2)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-emerald-400 font-mono font-semibold">
-                  ${p.sellingPrice?.toFixed(2)}
+                  ₹{p.sellingPrice?.toFixed(2)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-emerald-400 font-mono font-semibold">
-                  ${(p.costPrice * p.currentStock).toFixed(2)}
+                  ₹{(p.costPrice * p.currentStock).toFixed(2)}
                 </td>
 
                 {/* Actions Column */}

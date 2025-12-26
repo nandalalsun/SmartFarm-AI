@@ -192,13 +192,13 @@ export default function Transactions() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-white">{sale.customerName}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-emerald-400 font-mono">
-                      ${sale.totalBillAmount}
+                      ₹{sale.totalBillAmount}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-slate-300 font-mono">
-                      ${sale.initialPaidAmount}
+                      ₹{sale.initialPaidAmount}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-slate-300 font-mono">
-                      ${sale.remainingBalance}
+                      ₹{sale.remainingBalance}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -260,7 +260,7 @@ export default function Transactions() {
                     {purchase.quantity}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-red-400 font-mono">
-                    ${purchase.totalCost}
+                    ₹{purchase.totalCost}
                   </td>
                 </tr>
               ))}
@@ -314,10 +314,10 @@ export default function Transactions() {
                       <div>
                         <p className="text-white font-medium">{item.productName}</p>
                         <p className="text-sm text-slate-400">
-                          {item.quantity} × ${item.unitPrice}
+                          {item.quantity} × ₹{item.unitPrice}
                         </p>
                       </div>
-                      <p className="text-emerald-400 font-mono font-medium">${item.lineTotal}</p>
+                      <p className="text-emerald-400 font-mono font-medium">₹{item.lineTotal}</p>
                     </div>
                   ))}
                 </div>
@@ -328,15 +328,15 @@ export default function Transactions() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-slate-300">
                     <span>Total Bill</span>
-                    <span className="font-mono">${selectedRecord.totalBillAmount}</span>
+                    <span className="font-mono">₹{selectedRecord.totalBillAmount}</span>
                   </div>
                   <div className="flex justify-between text-slate-300">
                     <span>Paid</span>
-                    <span className="font-mono">${selectedRecord.initialPaidAmount}</span>
+                    <span className="font-mono">₹{selectedRecord.initialPaidAmount}</span>
                   </div>
                   <div className="flex justify-between text-white font-bold border-t border-slate-700 pt-2">
                     <span>Balance</span>
-                    <span className="font-mono">${selectedRecord.remainingBalance}</span>
+                    <span className="font-mono">₹{selectedRecord.remainingBalance}</span>
                   </div>
                 </div>
               </div>
@@ -354,7 +354,7 @@ export default function Transactions() {
                         <div className="w-2 h-2 bg-emerald-400 rounded-full" />
                         <div className="flex-1">
                           <p className="text-white font-medium">
-                            ${txn.amountPaid}{' '}
+                            ₹{txn.amountPaid}{' '}
                             <span className="text-slate-400 text-sm">({txn.paymentMethod})</span>
                           </p>
                           <p className="text-sm text-slate-400">
@@ -491,7 +491,7 @@ export default function Transactions() {
                 <div>
                   <label className="block text-slate-400 text-sm mb-1">Total Cost</label>
                   <div className="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-slate-300">
-                    $
+                    ₹
                     {(
                       (parseFloat(purchaseForm.quantity) || 0) *
                       (parseFloat(purchaseForm.unitPrice) || 0)
