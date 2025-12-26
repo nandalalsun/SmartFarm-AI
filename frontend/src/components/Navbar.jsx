@@ -31,11 +31,11 @@ export default function Navbar() {
                 <NavLink to="/sales/new" className={navLinkClass}>
                   New Sale
                 </NavLink>
-                <NavLink to="/scan" className={navLinkClass}>
-                  Scan Bill
-                </NavLink>
                 <NavLink to="/transactions" className={navLinkClass}>
                   Transactions
+                </NavLink>
+                <NavLink to="/scan" className={navLinkClass}>
+                  Scan Bill
                 </NavLink>
               </div>
             </div>

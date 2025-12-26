@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../api/axios';
 import Toast from '../components/Toast';
+import SearchableDropdown from '../components/SearchableDropdown';
 
 const NewSale = () => {
   const [customers, setCustomers] = useState([]);
@@ -209,18 +210,14 @@ const NewSale = () => {
         <div className="space-y-6">
           <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
             <h2 className="text-xl font-semibold text-white mb-4">Customer Details</h2>
-            <select
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white mb-4"
-              value={formData.customerId}
-              onChange={e => setFormData({ ...formData, customerId: e.target.value })}
-            >
-              <option value="">Select Customer...</option>
-              {customers.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <div className="mb-4">
+              <SearchableDropdown
+                options={customers}
+                value={formData.customerId}
+                onChange={id => setFormData({ ...formData, customerId: id })}
+                placeholder="Select or search for a customer..."
+              />
+            </div>
 
             {selectedCustomer && (
               <div className="bg-slate-900 p-4 rounded-lg space-y-2 text-sm">

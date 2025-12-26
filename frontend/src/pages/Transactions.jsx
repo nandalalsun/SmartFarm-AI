@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
+import SearchableDropdown from '../components/SearchableDropdown';
 
 export default function Transactions() {
   const [activeTab, setActiveTab] = useState('sales');
@@ -274,7 +275,7 @@ export default function Transactions() {
          <div className="space-y-6">
             
             {/* Filter Bar (Hidden on Print) */}
-            <div className="bg-slate-800/50 backdrop-blur p-4 rounded-xl border border-slate-700 grid grid-cols-1 md:grid-cols-6 gap-4 print:hidden">
+            <div className="relative z-10 bg-slate-800/50 backdrop-blur p-4 rounded-xl border border-slate-700 grid grid-cols-1 md:grid-cols-6 gap-4 print:hidden">
                <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 ml-1">Date Range</label>
                   <select 
@@ -322,14 +323,13 @@ export default function Transactions() {
 
                <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1.5 ml-1">Customer</label>
-                  <select 
-                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-violet-500 outline-none"
-                     value={filters.customerId}
-                     onChange={(e) => handleManualFilterChange('customerId', e.target.value)}
-                  >
-                     <option value="">All Customers</option>
-                     {farmers.map(f => (<option key={f.id} value={f.id}>{f.name}</option>))}
-                  </select>
+                  <SearchableDropdown
+                    options={farmers}
+                    value={filters.customerId}
+                    onChange={(id) => handleManualFilterChange('customerId', id)}
+                    placeholder="Search all customers..."
+                    allOptionLabel="All Customers"
+                  />
                </div>
                
                <div>
