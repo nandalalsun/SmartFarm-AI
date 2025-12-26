@@ -1,4 +1,4 @@
-package com.farmsmart.backend.tools;
+package com.farmsmart.backend.ai.tools;
 
 import com.farmsmart.backend.ai.intent.IntentClassifier;
 import com.farmsmart.backend.ai.intent.IntentRequest;

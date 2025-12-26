@@ -1,4 +1,4 @@
-package com.farmsmart.backend.tools;
+package com.farmsmart.backend.ai.tools;
 
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.data.embedding.Embedding;

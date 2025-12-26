@@ -1,8 +1,8 @@
 package com.farmsmart.backend.service;
 
-import com.farmsmart.backend.agent.FarmAssistantAgent;
-import com.farmsmart.backend.tools.DatabaseTool;
-import com.farmsmart.backend.tools.KnowledgeTool;
+import com.farmsmart.backend.ai.agent.FarmAssistantAgent;
+import com.farmsmart.backend.ai.tools.DatabaseTool;
+import com.farmsmart.backend.ai.tools.KnowledgeTool;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.service.AiServices;

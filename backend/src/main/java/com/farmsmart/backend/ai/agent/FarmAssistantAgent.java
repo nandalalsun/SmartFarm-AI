@@ -1,4 +1,4 @@
-package com.farmsmart.backend.agent;
+package com.farmsmart.backend.ai.agent;
 
 import dev.langchain4j.service.SystemMessage;
 
