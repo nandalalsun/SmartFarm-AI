@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../api/axios';
 import SearchableDropdown from '../components/SearchableDropdown';
+import { useReactToPrint } from 'react-to-print';
+import TransactionPrintView from '../components/TransactionPrintView';
 
 export default function Transactions() {
   const [activeTab, setActiveTab] = useState('sales');
@@ -37,6 +39,7 @@ export default function Transactions() {
     supplierName: '',
   });
   const [products, setProducts] = useState([]);
+  const printRef = useRef();
 
   useEffect(() => {
     fetchFarmers();
@@ -148,9 +151,9 @@ export default function Transactions() {
     fetchReport(resetFilters);
   };
 
-  const handlePrint = () => {
-      window.print();
-  };
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+  });
 
   const downloadCSV = () => {
       if (!reportData.transactions || reportData.transactions.length === 0) {
@@ -636,6 +639,25 @@ export default function Transactions() {
           </div>
         </div>
       )}
+
+      {/* Hidden Print Component */}
+      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+        <TransactionPrintView 
+          ref={printRef}
+          data={reportData.transactions}
+          filters={{
+            from: filters.fromDate,
+            to: filters.toDate,
+            customer: filters.customerId ? farmers.find(f => f.id === filters.customerId)?.name : null,
+            status: filters.paymentStatus
+          }}
+          summary={{
+            totalSales: reportData.totalSales,
+            totalPaid: reportData.totalPaid,
+            totalOutstanding: reportData.totalOutstanding
+          }}
+        />
+      </div>
     </div>
   );
 }
