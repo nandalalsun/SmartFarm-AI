@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.util.UUID;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Entity
 @Data
@@ -14,6 +15,7 @@ public class SaleItem {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "sale_id")
+    @JsonBackReference
     private Sale sale;
 
     @ManyToOne(optional = false)

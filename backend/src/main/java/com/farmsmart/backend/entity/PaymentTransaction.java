@@ -5,6 +5,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Entity
 @Data
@@ -14,6 +15,7 @@ public class PaymentTransaction {
     private UUID id;
 
     @ManyToOne
+    @JsonBackReference
     private Sale sale;
 
     @ManyToOne(optional = false)

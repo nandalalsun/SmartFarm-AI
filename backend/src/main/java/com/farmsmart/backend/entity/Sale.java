@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
 @Data
@@ -28,9 +29,11 @@ public class Sale {
     private String saleChannel;
 
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL)
+    @JsonManagedReference
     private List<SaleItem> items;
 
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL)
+    @JsonManagedReference
     private List<PaymentTransaction> paymentTransactions;
 
     @Column(updatable = false)
