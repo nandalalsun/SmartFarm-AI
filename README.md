@@ -29,8 +29,22 @@ config:
   layout: elk
 ---
 erDiagram
+
+    USER ||--o{ USER_ROLE : "assigned"
+    ROLE ||--o{ USER_ROLE : "defines"
+
+    USER ||--o{ USER_INVITATION : "creates"
+    USER_INVITATION ||--o| USER : "accepted by"
+
+    USER ||--o| TWO_FACTOR_AUTH : "secured by"
+    USER ||--o{ LOGIN_AUDIT : "logs"
+
+    USER ||--o{ SALE : "creates"
+    USER ||--o{ PURCHASE : "records"
+    USER ||--o{ STOCK_ADJUSTMENT : "performs"
+
     CUSTOMER ||--o{ SALE : "places"
-    CUSTOMER ||--o{ CREDIT_LEDGER : "has history of"
+    CUSTOMER ||--o{ CREDIT_LEDGER : "has history"
     CUSTOMER ||--o{ PAYMENT_TRANSACTION : "makes"
     CUSTOMER ||--o{ PURCHASE : "supplies"
 
@@ -44,6 +58,57 @@ erDiagram
     SALE ||--o| BILL_IMAGE : "documented by"
 
     PURCHASE ||--o| CREDIT_LEDGER : "generates credit"
+
+    USER {
+        uuid id PK
+        string full_name
+        string email "Unique"
+        string password_hash "Nullable for Google"
+        string auth_provider "LOCAL / GOOGLE"
+        string provider_id "OAuth sub"
+        boolean is_2fa_enabled
+        boolean is_active
+        timestamp created_at
+        timestamp last_login_at
+    }
+
+    ROLE {
+        uuid id PK
+        string name "OWNER / MANAGER / ACCOUNTANT / SALES / VIEW_ONLY"
+        string description
+    }
+
+    USER_ROLE {
+        uuid user_id FK
+        uuid role_id FK
+    }
+
+    USER_INVITATION {
+        uuid id PK
+        string email "Invited email"
+        string invite_token "One-time"
+        uuid role_id FK
+        string status "PENDING / ACCEPTED / EXPIRED / REVOKED"
+        timestamp expires_at
+        timestamp accepted_at
+        uuid invited_by_user_id FK
+    }
+
+    TWO_FACTOR_AUTH {
+        uuid id PK
+        uuid user_id FK
+        string secret_key "Encrypted TOTP secret"
+        timestamp enabled_at
+    }
+
+    LOGIN_AUDIT {
+        uuid id PK
+        uuid user_id FK
+        string ip_address
+        string user_agent
+        boolean success
+        timestamp attempted_at
+    }
 
     CUSTOMER {
         uuid id PK
@@ -68,6 +133,7 @@ erDiagram
     SALE {
         uuid id PK
         uuid customer_id FK
+        uuid created_by_user_id FK
         decimal total_bill_amount
         decimal initial_paid_amount
         decimal remaining_balance
@@ -105,8 +171,9 @@ erDiagram
     PURCHASE {
         uuid id PK
         uuid product_id FK
-        uuid customer_id FK "Optional, for farmer deliveries"
-        string supplier_name "Optional, for non-farmers"
+        uuid customer_id FK
+        uuid created_by_user_id FK
+        string supplier_name
         int quantity
         decimal total_cost
         timestamp purchase_date
@@ -125,7 +192,7 @@ erDiagram
         string adjustment_type "DAMAGE / THEFT / COUNT_ERROR / EXPIRY / GIFT / OTHER"
         string reason
         timestamp adjusted_at
-        uuid adjusted_by_user_id FK "Optional, if multi-user"
+        uuid adjusted_by_user_id FK
     }
 ```
 
