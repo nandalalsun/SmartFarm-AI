@@ -36,6 +36,10 @@ public class Sale {
     @JsonManagedReference
     private List<PaymentTransaction> paymentTransactions;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_user_id")
+    private User createdBy;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 

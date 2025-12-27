@@ -28,6 +28,10 @@ public class StockAdjustment {
     @Column(nullable = false)
     private LocalDateTime adjustedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_user_id")
+    private User createdBy;
+
     private UUID adjustedByUserId;
 
     @PrePersist

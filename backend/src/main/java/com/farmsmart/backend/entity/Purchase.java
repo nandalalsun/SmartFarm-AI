@@ -24,6 +24,10 @@ public class Purchase {
     private Integer quantity;
     private BigDecimal totalCost;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_user_id")
+    private User createdBy;
+
     private LocalDateTime purchaseDate;
 
     @PrePersist
