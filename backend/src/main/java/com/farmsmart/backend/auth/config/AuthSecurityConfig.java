@@ -1,9 +1,8 @@
-package com.farmsmart.backend.config;
+package com.farmsmart.backend.auth.config;
 
-import com.farmsmart.backend.security.CustomUserDetailsService;
-import com.farmsmart.backend.security.JwtAuthenticationFilter;
-import com.farmsmart.backend.security.CustomOAuth2SuccessHandler;
-import lombok.RequiredArgsConstructor;
+import com.farmsmart.backend.auth.security.CustomUserDetailsService;
+import com.farmsmart.backend.auth.security.JwtAuthenticationFilter;
+import com.farmsmart.backend.auth.security.OAuth2SuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -26,16 +25,29 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Security configuration for the auth module.
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@RequiredArgsConstructor
-public class SecurityConfig {
+public class AuthSecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final CustomUserDetailsService userDetailsService;
-    private final CustomOAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
+    public AuthSecurityConfig(JwtAuthenticationFilter jwtAuthFilter, 
+                             CustomUserDetailsService userDetailsService,
+                             OAuth2SuccessHandler oAuth2SuccessHandler) {
+        this.jwtAuthFilter = jwtAuthFilter;
+        this.userDetailsService = userDetailsService;
+        this.oAuth2SuccessHandler = oAuth2SuccessHandler;
+    }
+
+    /**
+     * Configure security filter chain.
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -43,7 +55,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/oauth2/**", "/login/**").permitAll()
-                .requestMatchers("/api/invitations/validate/**", "/api/invitations/accept").permitAll()
+                .requestMatchers("/api/auth/invitations/validate/**").permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -65,6 +77,9 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Configure authentication provider.
+     */
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -73,16 +88,25 @@ public class SecurityConfig {
         return authProvider;
     }
 
+    /**
+     * Configure authentication manager.
+     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
+    /**
+     * Configure password encoder.
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Configure CORS.
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();

@@ -1,5 +1,6 @@
 package com.farmsmart.backend.entity;
 
+import com.farmsmart.backend.auth.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;

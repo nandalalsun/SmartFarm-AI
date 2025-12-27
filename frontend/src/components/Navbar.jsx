@@ -1,6 +1,8 @@
 import { Link, NavLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
+  const { logout } = useAuth();
   const navLinkClass = ({ isActive }) =>
     isActive
       ? 'bg-violet-600 hover:bg-violet-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors'
@@ -39,6 +41,15 @@ export default function Navbar() {
                 </NavLink>
               </div>
             </div>
+          </div>
+
+          <div className="hidden md:block">
+            <button
+              onClick={logout}
+              className="text-gray-300 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </div>
