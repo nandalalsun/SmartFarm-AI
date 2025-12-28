@@ -81,6 +81,31 @@ public class InvitationService {
     }
 
     /**
+     * Get all invitations.
+     */
+    public java.util.List<InvitationResponse> getAllInvitations() {
+        return invitationRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Revoke an invitation.
+     */
+    @Transactional
+    public void revokeInvitation(UUID id) {
+        Invitation invitation = invitationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invitation not found"));
+        
+        if (invitation.getStatus() != Invitation.InvitationStatus.PENDING) {
+             throw new IllegalArgumentException("Cannot revoke non-pending invitation");
+        }
+
+        invitation.setStatus(Invitation.InvitationStatus.REVOKED);
+        invitationRepository.save(invitation);
+    }
+
+    /**
      * Map invitation entity to response DTO.
      */
     private InvitationResponse mapToResponse(Invitation invitation) {

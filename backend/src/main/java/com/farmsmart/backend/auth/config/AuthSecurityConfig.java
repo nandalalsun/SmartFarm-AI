@@ -54,8 +54,16 @@ public class AuthSecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/oauth2/**", "/login/**").permitAll()
-                .requestMatchers("/api/auth/invitations/validate/**").permitAll()
+                // Public auth endpoints
+                .requestMatchers("/api/auth/login", "/api/auth/signup", "/api/auth/verify-2fa", 
+                                "/api/auth/refresh", "/api/auth/invitations/validate/**").permitAll()
+                // Public legal pages  
+                .requestMatchers("/api/legal/**").permitAll()
+                // OAuth2 endpoints
+                .requestMatchers("/oauth2/**", "/login/**").permitAll()
+                // Dev endpoints (REMOVE IN PRODUCTION)
+                .requestMatchers("/api/dev/**").permitAll()
+                // All other requests require authentication
                 .anyRequest().authenticated()
             )
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

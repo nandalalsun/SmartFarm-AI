@@ -40,6 +40,25 @@ public class InvitationController {
     }
 
     /**
+     * Get all invitations (ADMIN only).
+     */
+    @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
+    public ResponseEntity<java.util.List<InvitationResponse>> getAllInvitations() {
+        return ResponseEntity.ok(invitationService.getAllInvitations());
+    }
+
+    /**
+     * Revoke invitation (ADMIN only).
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
+    public ResponseEntity<Void> revokeInvitation(@PathVariable java.util.UUID id) {
+        invitationService.revokeInvitation(id);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
      * Validate invitation code (public endpoint).
      */
     @GetMapping("/validate/{code}")

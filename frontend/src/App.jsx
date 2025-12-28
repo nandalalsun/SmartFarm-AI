@@ -13,6 +13,13 @@ import Login from './pages/Login';
 import Verify2FA from './pages/Verify2FA';
 import AcceptInvite from './pages/AcceptInvite';
 import OAuth2RedirectHandler from './components/OAuth2RedirectHandler';
+import RoleRoute from './components/RoleRoute';
+import ProfilePage from './features/account/ProfilePage';
+import SecurityPage from './features/account/SecurityPage';
+import UserManagementPage from './features/admin/UserManagementPage';
+
+import InvitationPage from './features/admin/InvitationPage';
+import { TermsPage, PrivacyPage, AboutPage } from './features/legal/LegalPages';
 
 function App() {
   return (
@@ -24,7 +31,11 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/verify-2fa" element={<Verify2FA />} />
             <Route path="/accept-invite" element={<AcceptInvite />} />
+
             <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
+            <Route path="/legal/terms" element={<TermsPage />} />
+            <Route path="/legal/privacy" element={<PrivacyPage />} />
+            <Route path="/legal/about" element={<AboutPage />} />
 
             {/* Protected Routes */}
             <Route path="/*" element={
@@ -37,6 +48,20 @@ function App() {
                   <Route path="/sales/new" element={<NewSale />} />
                   <Route path="/scan" element={<BillScanner />} />
                   <Route path="/transactions" element={<Transactions />} />
+                  
+                  {/* Account Routes */}
+                  <Route path="/account/profile" element={<ProfilePage />} />
+                  <Route path="/account/security" element={<SecurityPage />} />
+
+                  {/* Admin Routes */}
+                  <Route path="/admin/*" element={
+                      <RoleRoute roles={['ROLE_OWNER', 'ROLE_MANAGER']}>
+                          <Routes>
+                              <Route path="users" element={<UserManagementPage />} />
+                              <Route path="invitations" element={<InvitationPage />} />
+                          </Routes>
+                      </RoleRoute>
+                  } />
                 </Routes>
                 <FarmAssistant />
               </ProtectedRoute>

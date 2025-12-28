@@ -44,10 +44,17 @@ public class LoginAudit {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "timestamp", nullable = false)
+    private LocalDateTime timestamp;
+
     @PrePersist
     protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
         if (createdAt == null) {
-            createdAt = LocalDateTime.now();
+            createdAt = now;
+        }
+        if (timestamp == null) {
+            timestamp = now;
         }
     }
 

@@ -93,7 +93,29 @@ public class UserService {
             user.getRoles().stream()
                 .map(role -> role.getName().name())
                 .collect(Collectors.toSet()),
-            user.isTwoFactorEnabled()
+            user.isTwoFactorEnabled(),
+            user.isEnabled()
         );
+    }
+    /**
+     * Update current user profile.
+     */
+    public UserInfoResponse updateProfile(com.farmsmart.backend.auth.dto.request.UpdateProfileRequest request) {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        
+        if (principal instanceof UserDetails) {
+            String email = ((UserDetails) principal).getUsername();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+            
+            user.setFirstName(request.getFirstName());
+            user.setLastName(request.getLastName());
+            
+            user = userRepository.save(user);
+            
+            return mapToUserInfoResponse(user);
+        }
+        
+        throw new IllegalStateException("No authenticated user found");
     }
 }

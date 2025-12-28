@@ -23,4 +23,5 @@ public class UserInfoResponse {
 
     @JsonProperty("is2faEnabled")
     private boolean twoFactorEnabled;
+    private boolean enabled;
 }

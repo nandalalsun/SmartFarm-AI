@@ -1,8 +1,9 @@
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ProfileDropdown from './ProfileDropdown';
 
 export default function Navbar() {
-  const { logout } = useAuth();
+  const { user } = useAuth();
   const navLinkClass = ({ isActive }) =>
     isActive
       ? 'bg-violet-600 hover:bg-violet-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors'
@@ -44,12 +45,10 @@ export default function Navbar() {
           </div>
 
           <div className="hidden md:block">
-            <button
-              onClick={logout}
-              className="text-gray-300 hover:text-white hover:bg-slate-800 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-            >
-              Logout
-            </button>
+            <div className="flex items-center space-x-4">
+               {/* Replaced old text links with Dropdown */}
+               <ProfileDropdown />
+            </div>
           </div>
         </div>
       </div>

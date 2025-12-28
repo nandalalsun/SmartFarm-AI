@@ -3,6 +3,7 @@ package com.farmsmart.backend.controller;
 import com.farmsmart.backend.entity.Customer;
 import com.farmsmart.backend.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -21,6 +22,7 @@ public class CustomerController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ROLE_OWNER', 'ROLE_MANAGER')")
     public Customer create(@RequestBody Customer customer) {
         return service.createCustomer(customer);
     }

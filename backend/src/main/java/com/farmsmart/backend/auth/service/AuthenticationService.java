@@ -18,6 +18,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -180,5 +181,79 @@ public class AuthenticationService {
         audit.setStatus(status);
         audit.setFailureReason(reason);
         loginAuditRepository.save(audit);
+    }
+    /**
+     * Change current user password.
+     */
+    public void changePassword(com.farmsmart.backend.auth.dto.request.ChangePasswordRequest request) {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        
+        if (principal instanceof UserDetails) {
+            String email = ((UserDetails) principal).getUsername();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+            
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                throw new IllegalArgumentException("Incorrect current password");
+            }
+            
+            user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+            userRepository.save(user);
+            return;
+        }
+        
+        throw new IllegalStateException("No authenticated user found");
+    }
+
+    /**
+     * Initiate 2FA setup.
+     */
+    public com.farmsmart.backend.auth.dto.response.TwoFactorSetupResponse initiate2faSetup() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        
+        if (principal instanceof UserDetails) {
+            String email = ((UserDetails) principal).getUsername();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+            
+            String secretKey = totpService.generateSecretKey();
+            String qrCodeUrl = totpService.getQrCodeUrl(email, secretKey);
+            
+            return new com.farmsmart.backend.auth.dto.response.TwoFactorSetupResponse(secretKey, qrCodeUrl);
+        }
+        
+         throw new IllegalStateException("No authenticated user found");
+    }
+
+    /**
+     * Confirm and enable 2FA.
+     */
+    public void confirm2faSetup(com.farmsmart.backend.auth.dto.request.TwoFactorConfirmRequest request) {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        
+        if (principal instanceof UserDetails) {
+            String email = ((UserDetails) principal).getUsername();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+            
+            if (!totpService.verifyCode(request.getSecretKey(), request.getCode())) {
+                throw new IllegalArgumentException("Invalid OTP code");
+            }
+            
+            TwoFactorAuth tfa = twoFactorAuthRepository.findByUser(user)
+                    .orElse(new TwoFactorAuth(user, request.getSecretKey()));
+            
+            tfa.setSecretKey(request.getSecretKey()); // Update if exists
+            tfa.setEnabled(true);
+            tfa.setEnabledAt(LocalDateTime.now());
+            
+            twoFactorAuthRepository.save(tfa);
+            
+            user.setTwoFactorEnabled(true);
+            userRepository.save(user);
+            return;
+        }
+        
+        throw new IllegalStateException("No authenticated user found");
     }
 }

@@ -12,6 +12,10 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.farmsmart.backend.auth.dto.request.ChangePasswordRequest;
+import com.farmsmart.backend.auth.dto.request.TwoFactorConfirmRequest;
+import com.farmsmart.backend.auth.dto.response.TwoFactorSetupResponse;
+
 /**
  * REST controller for authentication endpoints.
  */
@@ -33,6 +37,7 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        System.out.println("LOGIN ATTEMPT: " + request.getEmail());
         return ResponseEntity.ok(authenticationService.login(request));
     }
 
@@ -67,5 +72,30 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<UserInfoResponse> getCurrentUser() {
         return ResponseEntity.ok(userService.getCurrentUserInfo());
+    }
+
+    /**
+     * Update current user info endpoint.
+     */
+    @PutMapping("/me")
+    public ResponseEntity<UserInfoResponse> updateProfile(@Valid @RequestBody com.farmsmart.backend.auth.dto.request.UpdateProfileRequest request) {
+        return ResponseEntity.ok(userService.updateProfile(request));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        authenticationService.changePassword(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/2fa/setup")
+    public ResponseEntity<TwoFactorSetupResponse> setup2fa() {
+        return ResponseEntity.ok(authenticationService.initiate2faSetup());
+    }
+
+    @PostMapping("/2fa/confirm")
+    public ResponseEntity<Void> confirm2fa(@Valid @RequestBody TwoFactorConfirmRequest request) {
+        authenticationService.confirm2faSetup(request);
+        return ResponseEntity.ok().build();
     }
 }

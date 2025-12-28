@@ -26,14 +26,32 @@ export const AuthProvider = ({ children }) => {
     
     // Check if user is logged in (decode token or fetch /me)
     useEffect(() => {
-        if (token) {
-             // Ideally fetch user profile
-             // For now, simple decode or assuming valid if present
-             // We can implement a /me endpoint to get user details
-             setLoading(false); // Mock for now
-        } else {
-             setLoading(false);
-        }
+        const fetchUser = async () => {
+            if (token) {
+                try {
+                    // Import dynamically or assume it's available via module scope if we imported at top
+                    // But we can't change imports with this tool easily in one go if we don't include top. 
+                    // Let's assume we will add import in next step or use global axios if needed, 
+                    // but better to use authService. 
+                    
+                    // Since I can't easily add the import line with this chunk, I will use axios directly for now 
+                    // matching the existing pattern, OR I should have added the import. 
+                    // Let's rely on axios being imported.
+                    const response = await axios.get('http://localhost:8080/api/auth/me');
+                    setUser(response.data);
+                } catch (error) {
+                    console.error("Failed to fetch user", error);
+                    // If 401, maybe logout?
+                    // logout(); 
+                } finally {
+                    setLoading(false);
+                }
+            } else {
+                 setLoading(false);
+            }
+        };
+
+        fetchUser();
     }, [token]);
 
     const login = (accessToken, newRefreshToken) => {
@@ -52,8 +70,16 @@ export const AuthProvider = ({ children }) => {
         window.location.href = '/login';
     };
 
+    const hasRole = (allowedRoles) => {
+        if (!user || !user.roles) return false;
+        if (Array.isArray(allowedRoles)) {
+             return user.roles.some(role => allowedRoles.includes(role));
+        }
+        return user.roles.includes(allowedRoles);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, token, login, logout, loading, hasRole, setUser }}>
             {children}
         </AuthContext.Provider>
     );
