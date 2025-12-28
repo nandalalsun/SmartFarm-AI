@@ -6,7 +6,6 @@ import com.farmsmart.backend.auth.entity.Role;
 import com.farmsmart.backend.auth.entity.User;
 import com.farmsmart.backend.auth.repository.RoleRepository;
 import com.farmsmart.backend.auth.repository.UserRepository;
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;

@@ -314,6 +314,97 @@ graph TD
 
 ---
 
+## CI/CD and Deployment Architecture
+
+### Workflow Strategy
+- **Continuous Integration:** Every Pull Request and push to `main` triggers the `build.yml` workflow, ensuring that both the Spring Boot backend and React frontend build correctly without tests failing.
+- **Production Deployment:** Deployment is triggered **only** when a semantic version tag (e.g., `v1.0.2`) is pushed to the repository.
+- **Manual Approval:** The "prod" environment is required for deployments. This can be configured in GitHub Repository Settings > Environments, where you can specify "Required Reviewers."
+
+### Infrastructure Targets
+- **Backend:** Deployed as a containerized service on **Google Cloud Run**.
+- **Frontend:** Hosted on **Firebase Hosting** for global CDN delivery and PWA support.
+- **Secrets:** Managed via GitHub Actions Secrets and injected into Cloud Run via Google Secret Manager.
+
+### Tag-Based Deployment Flow
+
+To deploy a new version to production:
+
+1. **Ensure all changes are committed and pushed to `main`**
+   ```bash
+   git add .
+   git commit -m "Release v1.0.0"
+   git push origin main
+   ```
+
+2. **Create and push a version tag**
+   ```bash
+   git tag v1.0.0
+   git push --tags
+   ```
+
+3. **Monitor GitHub Actions**
+   - Navigate to the "Actions" tab in your GitHub repository
+   - Both `deploy-backend.yml` and `deploy-frontend.yml` will trigger automatically
+   - Approve deployment if "prod" environment requires manual review
+
+4. **Verify deployment**
+   - Backend: Check Cloud Run service URL in workflow logs
+   - Frontend: Visit your Firebase Hosting URL
+
+### Required GitHub Secrets
+
+Configure these secrets in **Settings > Secrets and variables > Actions**:
+
+| Secret Name | Description | Example/Format |
+|-------------|-------------|----------------|
+| `GCP_PROJECT_ID` | Google Cloud Project ID | `smartfarm-prod-123456` |
+| `GCP_REGION` | GCP region for Cloud Run | `us-central1` |
+| `GCP_SA_KEY` | Service account JSON key | `{"type": "service_account", ...}` |
+| `CLOUD_RUN_SERVICE` | Cloud Run service name | `smartfarm-backend` |
+| `FIREBASE_SERVICE_ACCOUNT` | Firebase service account JSON | `{"type": "service_account", ...}` |
+| `FIREBASE_PROJECT_ID` | Firebase project ID | `smartfarm-ai` |
+| `INSTANCE_CONNECTION_NAME` | Cloud SQL connection string | `project:region:instance` |
+
+> **Note:** The `GEMINI_KEY` secret should be configured in **Google Secret Manager** (not GitHub Secrets) and referenced in the Cloud Run deployment.
+
+### Rollback Strategy
+
+#### Backend (Cloud Run)
+1. Open [Google Cloud Console](https://console.cloud.google.com/)
+2. Navigate to **Cloud Run > [Your Service]**
+3. Click **"Revisions"** tab
+4. Select the previous stable revision
+5. Click **"Manage Traffic"** and route 100% traffic to the stable revision
+6. Click **"Save"**
+
+**Alternative (CLI):**
+```bash
+gcloud run services update-traffic CLOUD_RUN_SERVICE \
+  --to-revisions=REVISION_NAME=100 \
+  --region=GCP_REGION
+```
+
+#### Frontend (Firebase Hosting)
+1. Open [Firebase Console](https://console.firebase.google.com/)
+2. Navigate to **Hosting > [Your Site]**
+3. Click **"Release history"**
+4. Find the previous stable deployment
+5. Click the three-dot menu and select **"Rollback"**
+
+**Alternative (CLI):**
+```bash
+firebase hosting:rollback --site=YOUR_SITE_ID
+```
+
+### Deployment Best Practices
+
+- **Semantic Versioning:** Use `vMAJOR.MINOR.PATCH` format (e.g., `v1.2.3`)
+- **Pre-release Tags:** Use `-alpha`, `-beta`, `-rc` suffixes for testing (e.g., `v1.0.0-beta`)
+- **Changelog:** Maintain a `CHANGELOG.md` file documenting changes in each release
+- **Testing:** Always verify CI build passes before creating release tags
+- **Monitoring:** Set up Cloud Run and Firebase alerts for error rates and performance
+
 
 ## 7. Future AI Context Summary
 **Copy and paste this paragraph the next time you start a chat with an AI to resume work:**
