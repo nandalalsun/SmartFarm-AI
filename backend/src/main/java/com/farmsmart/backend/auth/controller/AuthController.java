@@ -21,7 +21,6 @@ import com.farmsmart.backend.auth.dto.response.TwoFactorSetupResponse;
  */
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:5173")
 public class AuthController {
 
     private final AuthenticationService authenticationService;

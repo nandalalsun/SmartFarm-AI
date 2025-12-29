@@ -9,7 +9,6 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/vision")
-@CrossOrigin(origins = "http://localhost:5173")
 public class VisionController {
 
     @Autowired

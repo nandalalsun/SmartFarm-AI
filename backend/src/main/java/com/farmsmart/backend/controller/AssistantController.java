@@ -11,7 +11,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/assistant")
-@CrossOrigin(origins = "http://localhost:5173")
 public class AssistantController {
 
     private final FarmAssistantService assistantService;

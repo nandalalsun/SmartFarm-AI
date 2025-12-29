@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "http://localhost:5173")
 @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
 public class UserController {
 
