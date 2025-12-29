@@ -30,18 +30,7 @@
 		<java.version>21</java.version>
 	</properties>
 
-	<repositories>
-		<repository>
-			<id>central</id>
-			<name>Maven Central</name>
-			<url>https://repo.maven.apache.org/maven2</url>
-		</repository>
-		<repository>
-			<id>sonatype-releases</id>
-			<name>Sonatype Releases</name>
-			<url>https://s01.oss.sonatype.org/content/repositories/releases/</url>
-		</repository>
-	</repositories>
+
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
