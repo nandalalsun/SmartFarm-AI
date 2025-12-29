@@ -11,6 +11,7 @@ jobs:
   build-and-deploy:
     name: Deploy Frontend to Firebase
     runs-on: ubuntu-latest
+    environment: prod
 
     steps:
       # 1️⃣ Checkout code

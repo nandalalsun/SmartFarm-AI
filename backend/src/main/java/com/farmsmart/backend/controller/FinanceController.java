@@ -15,7 +15,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/finance")
-@CrossOrigin(origins = "*")
 public class FinanceController {
 
     @Autowired private FinanceService financeService;

@@ -11,7 +11,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/inventory")
-@CrossOrigin(origins = "http://localhost:5173")
 public class InventoryController {
 
     @Autowired
