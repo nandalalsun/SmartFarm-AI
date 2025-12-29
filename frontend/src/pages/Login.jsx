@@ -33,7 +33,8 @@ const Login = () => {
     };
 
     const handleGoogleLogin = () => {
-        const baseUrl = (import.meta.env.VITE_API_URL).replace(/\/api$/, '');
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const baseUrl = apiUrl ? apiUrl.replace(/\/api$/, '') : window.location.origin;
         window.location.href = `${baseUrl}/oauth2/authorize/google?redirect_uri=${window.location.origin}/oauth2/redirect`;
     };
 
