@@ -3,6 +3,7 @@ package com.farmsmart.backend.auth.config;
 import com.farmsmart.backend.auth.security.CustomUserDetailsService;
 import com.farmsmart.backend.auth.security.JwtAuthenticationFilter;
 import com.farmsmart.backend.auth.security.OAuth2SuccessHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -112,13 +113,16 @@ public class AuthSecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    @Value("${app.cors.allowed-origins}")
+    private List<String> allowedOrigins;
+
     /**
      * Configure CORS.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173")); // Frontend
+        configuration.setAllowedOrigins(allowedOrigins); // Configured from properties
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
