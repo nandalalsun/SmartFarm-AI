@@ -1,48 +1,45 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:8080/api/auth';
-const INVITATION_URL = 'http://localhost:8080/api/invitations';
+import api from '../api/axios';
 
 const login = async (email, password) => {
-    const response = await axios.post(`${API_URL}/login`, { email, password });
+    const response = await api.post('/auth/login', { email, password });
     return response.data;
 };
 
 const verify2fa = async (email, code) => {
-    const response = await axios.post(`${API_URL}/verify-2fa`, { email, code });
+    const response = await api.post('/auth/verify-2fa', { email, code });
     return response.data;
 };
 
 const signup = async (token, password, firstName, lastName) => {
-    return axios.post(`${API_URL}/signup`, { token, password, firstName, lastName });
+    return api.post('/auth/signup', { token, password, firstName, lastName });
 };
 
 const validateInvitation = async (token) => {
-    const response = await axios.get(`${INVITATION_URL}/validate/${token}`);
+    const response = await api.get(`/auth/invitations/validate/${token}`);
     return response.data;
 };
 
 const getCurrentUser = async () => {
-    const response = await axios.get(`${API_URL}/me`);
+    const response = await api.get('/auth/me');
     return response.data;
 };
 
 const updateProfile = async (firstName, lastName) => {
-    const response = await axios.put(`${API_URL}/me`, { firstName, lastName });
+    const response = await api.put('/auth/me', { firstName, lastName });
     return response.data;
 };
 
 const changePassword = async (currentPassword, newPassword) => {
-    await axios.post(`${API_URL}/change-password`, { currentPassword, newPassword });
+    await api.post('/auth/change-password', { currentPassword, newPassword });
 };
 
 const setup2fa = async () => {
-    const response = await axios.post(`${API_URL}/2fa/setup`);
+    const response = await api.post('/auth/2fa/setup');
     return response.data;
 };
 
 const confirm2fa = async (secretKey, code) => {
-    await axios.post(`${API_URL}/2fa/confirm`, { secretKey, code });
+    await api.post('/auth/2fa/confirm', { secretKey, code });
 };
 
 export default {

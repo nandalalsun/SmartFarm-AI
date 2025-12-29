@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: 'https://smart-farm-ai-service-877202575480.me-central1.run.app/api',
   headers: {
     'Content-Type': 'application/json',
   },
