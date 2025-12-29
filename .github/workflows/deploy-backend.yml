@@ -10,7 +10,7 @@ env:
   GCP_REGION: ${{ secrets.GCP_REGION }}
   CLOUD_RUN_SERVICE: ${{ secrets.CLOUD_RUN_SERVICE }}
   ARTIFACT_REGISTRY: ${{ secrets.GCP_REGION }}-docker.pkg.dev
-  REPOSITORY: smartfarm-backend
+  REPOSITORY: farm-smart-ai-repo
   IMAGE_NAME: backend
 
 jobs:
