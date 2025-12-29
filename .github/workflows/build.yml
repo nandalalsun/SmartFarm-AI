@@ -30,7 +30,7 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci_dummy_jwt_secret_that_is_long_enough_for_validation' }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || 'ci_dummy_client_id' }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || 'ci_dummy_client_secret' }}
-        run: mvn clean verify -DskipTests
+        run: mvn -U clean verify -DskipTests --fail-at-end || mvn -U clean verify -DskipTests
 
   frontend:
     name: Frontend Build & Test
