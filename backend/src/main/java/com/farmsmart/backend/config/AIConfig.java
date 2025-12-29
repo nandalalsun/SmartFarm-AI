@@ -54,15 +54,28 @@ public class AIConfig {
     }
 
     @Bean
-    public EmbeddingStore<TextSegment> embeddingStore() {
+    public EmbeddingStore<TextSegment> embeddingStore(
+            @Value("${spring.datasource.url}") String datasourceUrl,
+            @Value("${spring.datasource.username}") String username,
+            @Value("${spring.datasource.password}") String password,
+            @Value("${pgvector.embedding.table:embeddings}") String tableName,
+            @Value("${pgvector.embedding.dimension:768}") Integer dimension) {
+        
+        // Extract host, port, and database from JDBC URL
+        // Format: jdbc:postgresql://host:port/database
+        String[] parts = datasourceUrl.replace("jdbc:postgresql://", "").split("[:/]");
+        String host = parts[0];
+        int port = parts.length > 1 ? Integer.parseInt(parts[1]) : 5432;
+        String database = parts.length > 2 ? parts[2] : "smartfarmdb";
+        
         return PgVectorEmbeddingStore.builder()
-                .host("localhost")
-                .port(5432)
-                .database("farmsmart")
-                .user("farmsmart")
-                .password("password")
-                .table("embeddings")
-                .dimension(768) // text-embedding-004 is 768 dimensions
+                .host(host)
+                .port(port)
+                .database(database)
+                .user(username)
+                .password(password)
+                .table(tableName)
+                .dimension(dimension)
                 .build();
     }
     /**
