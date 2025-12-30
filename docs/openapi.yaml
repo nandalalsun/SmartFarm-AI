@@ -1,0 +1,1146 @@
+openapi: 3.0.3
+info:
+  title: SmartFarm AI API
+  description: Complete API specification for SmartFarm AI - Poultry Farm ERP & Billing System
+  version: 1.0.0
+  contact:
+    name: SmartFarm AI Team
+
+servers:
+  - url: http://localhost:8080/api
+    description: Local Development Server
+  - url: https://your-cloud-run-url/api
+    description: Production Server (GCP Cloud Run)
+
+tags:
+  - name: Authentication
+    description: User authentication, MFA, and session management
+  - name: Invitations
+    description: User invitation management
+  - name: Users
+    description: User management and role assignment
+  - name: Sales
+    description: Sales transaction management
+  - name: Inventory
+    description: Stock management and adjustments
+  - name: Purchases
+    description: Purchase tracking and supplier management
+  - name: Finance
+    description: Financial reporting and ledgers
+  - name: Dashboard
+    description: Dashboard statistics and insights
+  - name: Products
+    description: Product catalog management
+  - name: Customers
+    description: Customer database management
+  - name: AI Vision
+    description: Bill scanning and extraction
+  - name: AI Assistant
+    description: RAG-based chat assistant
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        requiresMfa:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/UserInfo'
+
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        twoFactorEnabled:
+          type: boolean
+        enabled:
+          type: boolean
+
+    InvitationRequest:
+      type: object
+      required:
+        - email
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [ROLE_OWNER, ROLE_MANAGER, ROLE_ACCOUNTANT, ROLE_SALES, ROLE_VIEW_ONLY, ROLE_ADMIN, ROLE_STAFF]
+
+    SaleRequest:
+      type: object
+      required:
+        - customerId
+        - items
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+              unitPrice:
+                type: number
+                format: decimal
+        payment:
+          type: object
+          properties:
+            amount:
+              type: number
+              format: decimal
+            method:
+              type: string
+              enum: [CASH, CHECK, TRANSFER]
+
+    StockAdjustmentRequest:
+      type: object
+      required:
+        - productId
+        - adjustmentQuantity
+        - type
+      properties:
+        productId:
+          type: string
+          format: uuid
+        adjustmentQuantity:
+          type: integer
+        type:
+          type: string
+          enum: [DAMAGE, THEFT, COUNT_ERROR, EXPIRY, GIFT, OTHER]
+        reason:
+          type: string
+
+    PurchaseRequest:
+      type: object
+      required:
+        - productId
+        - supplierName
+        - quantity
+        - totalCost
+      properties:
+        productId:
+          type: string
+          format: uuid
+        supplierName:
+          type: string
+        quantity:
+          type: integer
+        totalCost:
+          type: number
+          format: decimal
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        category:
+          type: string
+          enum: [FEED, MEDICINE, LIVE_CHICK, MEAT, EGGS]
+        costPrice:
+          type: number
+          format: decimal
+        sellingPrice:
+          type: number
+          format: decimal
+        unit:
+          type: string
+          enum: [KG, BAG, TRAY, PIECE]
+        currentStock:
+          type: integer
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        email:
+          type: string
+        customerType:
+          type: string
+          enum: [FARMER, BUTCHER, RETAIL]
+        creditLimit:
+          type: number
+          format: decimal
+        currentTotalBalance:
+          type: number
+          format: decimal
+
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+paths:
+  # Authentication Endpoints
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+        '403':
+          description: Account disabled
+
+  /auth/verify-2fa:
+    post:
+      tags:
+        - Authentication
+      summary: Verify 2FA code
+      description: Verify TOTP code for two-factor authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                code:
+                  type: string
+      responses:
+        '200':
+          description: 2FA verification successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid 2FA code
+
+  /auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: Register new user via invitation code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                invitationCode:
+                  type: string
+      responses:
+        '200':
+          description: Registration successful
+        '400':
+          description: Invalid invitation code
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+    put:
+      tags:
+        - Authentication
+      summary: Update current user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+
+  /auth/change-password:
+    post:
+      tags:
+        - Authentication
+      summary: Change password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+      responses:
+        '200':
+          description: Password changed successfully
+
+  /auth/2fa/setup:
+    post:
+      tags:
+        - Authentication
+      summary: Initiate 2FA setup
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 2FA setup initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  secret:
+                    type: string
+                  qrCodeUrl:
+                    type: string
+
+  /auth/2fa/confirm:
+    post:
+      tags:
+        - Authentication
+      summary: Confirm and enable 2FA
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+      responses:
+        '200':
+          description: 2FA enabled successfully
+
+  # Invitation Management
+  /auth/invitations:
+    post:
+      tags:
+        - Invitations
+      summary: Create new invitation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationRequest'
+      responses:
+        '200':
+          description: Invitation created
+    get:
+      tags:
+        - Invitations
+      summary: List all invitations
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of invitations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /auth/invitations/{id}:
+    delete:
+      tags:
+        - Invitations
+      summary: Revoke invitation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Invitation revoked
+
+  /auth/invitations/validate/{code}:
+    get:
+      tags:
+        - Invitations
+      summary: Validate invitation code
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invitation is valid
+        '400':
+          description: Invalid or expired invitation
+
+  # User Management
+  /users:
+    get:
+      tags:
+        - Users
+      summary: List all users
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserInfo'
+
+  /users/{id}/roles:
+    put:
+      tags:
+        - Users
+      summary: Update user roles
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roles:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Roles updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+
+  /users/{id}/status:
+    put:
+      tags:
+        - Users
+      summary: Toggle user status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User status toggled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+
+  # Sales
+  /sales:
+    post:
+      tags:
+        - Sales
+      summary: Create new sale
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaleRequest'
+      responses:
+        '200':
+          description: Sale created
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /sales/history:
+    get:
+      tags:
+        - Sales
+      summary: Get sales history
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sales history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  # Inventory
+  /inventory/adjust:
+    post:
+      tags:
+        - Inventory
+      summary: Adjust stock level
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockAdjustmentRequest'
+      responses:
+        '200':
+          description: Stock adjusted
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /inventory/adjustments/{productId}:
+    get:
+      tags:
+        - Inventory
+      summary: Get adjustment history for product
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Adjustment history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  # Purchases
+  /purchases:
+    post:
+      tags:
+        - Purchases
+      summary: Record new purchase
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseRequest'
+      responses:
+        '200':
+          description: Purchase recorded
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /purchases/history:
+    get:
+      tags:
+        - Purchases
+      summary: Get purchase history
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Purchase history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  # Finance
+  /finance/report:
+    get:
+      tags:
+        - Finance
+      summary: Get profit/loss report
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Financial report
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /finance/transactions:
+    get:
+      tags:
+        - Finance
+      summary: Get transaction report
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customerId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: fromDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: toDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: paymentStatus
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transaction report
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /finance/ledger:
+    get:
+      tags:
+        - Finance
+      summary: Get unified ledger
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customerId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: fromDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: toDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: paymentStatus
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Unified ledger
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  # Dashboard
+  /dashboard/stats:
+    get:
+      tags:
+        - Dashboard
+      summary: Get dashboard KPIs
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /dashboard/revenue-expense:
+    get:
+      tags:
+        - Dashboard
+      summary: Get revenue vs expense data
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Revenue and expense trends
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /dashboard/stock-distribution:
+    get:
+      tags:
+        - Dashboard
+      summary: Get stock distribution by category
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Stock distribution
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /dashboard/top-credits:
+    get:
+      tags:
+        - Dashboard
+      summary: Get top customers by credit balance
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Top credit customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /dashboard/alerts/low-stock:
+    get:
+      tags:
+        - Dashboard
+      summary: Get low stock alerts
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Low stock alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /dashboard/alerts/aging-credit:
+    get:
+      tags:
+        - Dashboard
+      summary: Get aging credit alerts
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Aging credit alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /dashboard/stock-movement:
+    get:
+      tags:
+        - Dashboard
+      summary: Get recent stock movements
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Recent stock movements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /dashboard/ai-insights:
+    get:
+      tags:
+        - Dashboard
+      summary: Get AI-generated insights
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: AI insights
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  # Products
+  /products:
+    get:
+      tags:
+        - Products
+      summary: List all products
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+    post:
+      tags:
+        - Products
+      summary: Create new product
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+      responses:
+        '200':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  # Customers
+  /customers:
+    get:
+      tags:
+        - Customers
+      summary: List all customers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+    post:
+      tags:
+        - Customers
+      summary: Create new customer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Customer'
+      responses:
+        '200':
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+
+  /customers/{id}/profit:
+    get:
+      tags:
+        - Customers
+      summary: Get profit analysis for customer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Customer profit analysis
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # AI Vision
+  /staging/upload:
+    post:
+      tags:
+        - AI Vision
+      summary: Upload bill image for analysis
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Bill uploaded and analyzed
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /staging/pending:
+    get:
+      tags:
+        - AI Vision
+      summary: Get pending staged bills
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of pending bills
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /vision/extract:
+    post:
+      tags:
+        - AI Vision
+      summary: Extract bill data directly
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Bill data extracted
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # AI Assistant
+  /assistant/chat:
+    post:
+      tags:
+        - AI Assistant
+      summary: Send message to AI assistant
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: AI response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reply:
+                    type: string
+
+  /assistant/upload:
+    post:
+      tags:
+        - AI Assistant
+      summary: Upload document for RAG context
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Document ingested successfully
+          content:
+            application/json:
+              schema:
+                type: string
