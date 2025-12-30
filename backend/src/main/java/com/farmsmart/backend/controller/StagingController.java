@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -27,6 +28,7 @@ public class StagingController {
     private ObjectMapper objectMapper;
 
     @PostMapping("/upload")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'SALES', 'STAFF')")
     public ResponseEntity<BillStaging> uploadBill(@RequestParam("image") MultipartFile image) throws IOException {
         // 1. Analyze with AI
         BillAnalysisResponse analysis = billVisionService.extractBillData(image);
@@ -45,6 +47,7 @@ public class StagingController {
     }
 
     @GetMapping("/pending")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'ACCOUNTANT')")
     public ResponseEntity<List<BillStaging>> getPendingBills() {
         return ResponseEntity.ok(billStagingRepository.findByStatusOrderByCreatedAtDesc("PENDING"));
     }

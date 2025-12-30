@@ -111,10 +111,18 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         String refreshToken = tokenProvider.generateRefreshToken(email);
 
+        if (frontendUrl == null || frontendUrl.isEmpty() || !frontendUrl.startsWith("http")) {
+            logger.error("Invalid frontend URL configured: " + frontendUrl);
+            redirectWithError(request, response, "Server configuration error: Invalid frontend URL");
+            return;
+        }
+
         String targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth2/redirect")
                 .queryParam("accessToken", token)
                 .queryParam("refreshToken", refreshToken)
                 .build().toUriString();
+
+        logger.info("Redirecting to: " + targetUrl);
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }

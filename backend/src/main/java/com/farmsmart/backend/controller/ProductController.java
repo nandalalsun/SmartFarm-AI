@@ -4,6 +4,7 @@ import com.farmsmart.backend.entity.Product;
 import com.farmsmart.backend.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.List;
 
 @RestController
@@ -18,6 +19,7 @@ public class ProductController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
     public Product create(@RequestBody Product product) {
         return service.createProduct(product);
     }

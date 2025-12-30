@@ -175,7 +175,7 @@ public class DashboardService {
     public List<Map<String, Object>> getAgingCredits() {
         // Checking credit_ledger for overdue
         String sql = """
-            SELECT c.name, cl.current_balance, cl.due_date 
+            SELECT c.id as customer_id, c.name, cl.current_balance, cl.due_date 
             FROM credit_ledger cl
             JOIN customer c ON cl.customer_id = c.id
             WHERE cl.status = 'ACTIVE' AND cl.due_date < CURRENT_DATE

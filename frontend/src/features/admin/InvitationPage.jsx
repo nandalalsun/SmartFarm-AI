@@ -50,7 +50,7 @@ const InvitationPage = () => {
     const roles = ['ROLE_OWNER', 'ROLE_MANAGER', 'ROLE_ACCOUNTANT', 'ROLE_SALES', 'ROLE_VIEW_ONLY'];
 
     return (
-        <div className="max-w-7xl mx-auto py-8 px-4">
+        <div className="max-w-7xl py-20 mx-auto px-4">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent mb-8">
                 Manage Invitations
             </h1>

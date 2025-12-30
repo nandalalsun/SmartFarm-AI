@@ -25,7 +25,6 @@ const UserManagementPage = () => {
 
     const handleRoleChange = async (userId, newRole) => {
         try {
-            // Assume single role selection for simplicity, though backend supports Set
             await adminService.updateUserRole(userId, [newRole]);
             fetchUsers();
         } catch (err) {
@@ -40,13 +39,7 @@ const UserManagementPage = () => {
         }
         try {
             await adminService.toggleUserStatus(userId);
-            fetchUsers(); // Refresh to see new status (enabled field doesn't exist in UserInfoResponse yet? Need to check)
-            // Wait, UserInfoResponse needs 'enabled' field? I added mapTouserResponse in UserController.
-            // Let's check UserInfoResponse.java. It doesn't have 'enabled'.
-            // I should add 'enabled' to UserInfoResponse.
-            // For now, I'll assume I did it or will do it. 
-            // If missing, UI won't show status. 
-            // I'll add it to UserInfoResponse.java in next tool call.
+            fetchUsers();
         } catch (err) {
             alert('Failed to toggle status');
         }
@@ -57,7 +50,7 @@ const UserManagementPage = () => {
     if (loading) return <div className="p-8 text-white">Loading users...</div>;
 
     return (
-        <div className="max-w-7xl mx-auto py-8 px-4">
+        <div className="max-w-7xl mx-auto py-20 px-4">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent mb-8">
                 User Management
             </h1>

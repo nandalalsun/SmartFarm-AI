@@ -7,16 +7,16 @@
 *   **Vision-to-Bill:** Snap a photo of a sales slip; AI extracts items, quantities, and totals.
 *   **Smart Business Ask (RAG):** Natural language queries for business insights (e.g., "Predict sales based on last month").
 *   **Credit Management:** Automated ledger for customer debts and payment history.
-*   **Self-Hosted AI:** No paid APIs; Llama 3/Mistral hosted on private AWS infrastructure.
+*   **Cloud AI:** Google Gemini API for vision-based bill extraction and intelligent business insights.
 
 ---
 
 ## 2. Technical Stack
 *   **Frontend:** React.js (PWA) with Tailwind CSS.
 *   **Backend:** Java 21 with Spring Boot 3.x.
-*   **AI Integration:** LangChain4j + Ollama (running Llama 3.2 Vision & Llama 3 8B).
-*   **Database:** PostgreSQL with **pgvector** extension.
-*   **Infrastructure:** AWS (Amplify for UI, EC2 G4dn for LLM, RDS for Data).
+*   **AI Integration:** LangChain4j + Google Gemini API (Gemini 1.5 Flash for chat, vision, and embeddings).
+*   **Database:** Google Cloud AlloyDB for PostgreSQL with **pgvector** extension.
+*   **Infrastructure:** GCP (Firebase Hosting for PWA, Cloud Run for backend, AlloyDB for data).
 
 ---
 
@@ -24,191 +24,175 @@
 This diagram defines how your farm data is structured.
 
 ```mermaid
----
-config:
-  layout: elk
----
 erDiagram
-
-    USER ||--o{ USER_ROLE : "assigned"
-    ROLE ||--o{ USER_ROLE : "defines"
-
-    USER ||--o{ USER_INVITATION : "creates"
-    USER_INVITATION ||--o| USER : "accepted by"
-
-    USER ||--o| TWO_FACTOR_AUTH : "secured by"
-    USER ||--o{ LOGIN_AUDIT : "logs"
-
-    USER ||--o{ SALE : "creates"
-    USER ||--o{ PURCHASE : "records"
-    USER ||--o{ STOCK_ADJUSTMENT : "performs"
-
-    CUSTOMER ||--o{ SALE : "places"
-    CUSTOMER ||--o{ CREDIT_LEDGER : "has history"
-    CUSTOMER ||--o{ PAYMENT_TRANSACTION : "makes"
-    CUSTOMER ||--o{ PURCHASE : "supplies"
-
-    PRODUCT ||--o{ SALE_ITEM : "included in"
-    PRODUCT ||--o{ PURCHASE : "restocked by"
-    PRODUCT ||--o{ STOCK_ADJUSTMENT : "adjusted for"
-
-    SALE ||--|{ SALE_ITEM : "contains"
-    SALE ||--o{ PAYMENT_TRANSACTION : "paid via"
-    SALE ||--o| CREDIT_LEDGER : "generates debt"
-    SALE ||--o| BILL_IMAGE : "documented by"
-
-    PURCHASE ||--o| CREDIT_LEDGER : "generates credit"
-
-    USER {
-        uuid id PK
-        string full_name
-        string email "Unique"
-        string password_hash "Nullable for Google"
-        string auth_provider "LOCAL / GOOGLE"
-        string provider_id "OAuth sub"
-        boolean is_2fa_enabled
-        boolean is_active
-        timestamp created_at
-        timestamp last_login_at
+    SaleItem {
+        UUID id PK
+        Integer quantity
+        BigDecimal unitPrice
+        BigDecimal lineTotal
+        UUID sale_id FK
+        UUID product_id FK
+    }
+    CreditLedger {
+        UUID id PK
+        BigDecimal originalDebt
+        BigDecimal currentBalance
+        LocalDate dueDate
+        String status
+        String remarks
+        UUID customer_id FK
+        UUID sale_id FK
+        UUID purchase_id FK
+    }
+    Sale {
+        UUID id PK
+        BigDecimal totalBillAmount
+        BigDecimal initialPaidAmount
+        BigDecimal remainingBalance
+        String paymentStatus
+        String saleChannel
+        LocalDateTime createdAt
+        UUID customer_id FK
+        UUID created_by_user_id FK
+    }
+    StockAdjustment {
+        UUID id PK
+        Integer adjustmentQuantity
+        String adjustmentType
+        String reason
+        LocalDateTime adjustedAt
+        UUID adjustedByUserId
+        UUID product_id FK
+        UUID created_by_user_id FK
+    }
+    PaymentTransaction {
+        UUID id PK
+        BigDecimal amountPaid
+        String paymentMethod
+        LocalDateTime paymentDate
+        UUID sale_id FK
+        UUID customer_id FK
+    }
+    BillStaging {
+        UUID id PK
+        String imageUrl
+        String extractedJson
+        String status
+        LocalDateTime createdAt
+        UUID userId
+    }
+    Customer {
+        UUID id PK
+        String name
+        String phone
+        String address
+        String email
+        String customerType
+        BigDecimal creditLimit
+        BigDecimal currentTotalBalance
+        LocalDateTime registeredAt
+    }
+    Purchase {
+        UUID id PK
+        String supplierName
+        Integer quantity
+        BigDecimal totalCost
+        LocalDateTime purchaseDate
+        UUID product_id FK
+        UUID customer_id FK
+        UUID created_by_user_id FK
+    }
+    Product {
+        UUID id PK
+        String name
+        String category
+        BigDecimal costPrice
+        BigDecimal sellingPrice
+        String unit
+        Integer currentStock
+    }
+    Role {
+        Long id PK
+        String name
+    }
+    TwoFactorAuth {
+        UUID id PK
+        String secretKey
+        boolean enabled
+        LocalDateTime createdAt
+        LocalDateTime enabledAt
+        UUID user_id FK
+    }
+    Invitation {
+        UUID id PK
+        String email
+        String code
+        LocalDateTime expiresAt
+        LocalDateTime usedAt
+        String status
+        LocalDateTime createdAt
+        UUID role_id FK
+        UUID created_by_user_id FK
+    }
+    LoginAudit {
+        UUID id PK
+        String email
+        String status
+        String failureReason
+        String ipAddress
+        String userAgent
+        LocalDateTime createdAt
+        LocalDateTime timestamp
+        UUID user_id FK
+    }
+    User {
+        UUID id PK
+        String email
+        String password
+        String firstName
+        String lastName
+        String authProvider
+        boolean enabled
+        boolean twoFactorEnabled
+        String googleSub
+        LocalDateTime createdAt
+        LocalDateTime lastLogin
     }
 
-    ROLE {
-        uuid id PK
-        string name "OWNER / MANAGER / ACCOUNTANT / SALES / VIEW_ONLY"
-        string description
-    }
-
-    USER_ROLE {
-        uuid user_id FK
-        uuid role_id FK
-    }
-
-    USER_INVITATION {
-        uuid id PK
-        string email "Invited email"
-        string invite_token "One-time"
-        uuid role_id FK
-        string status "PENDING / ACCEPTED / EXPIRED / REVOKED"
-        timestamp expires_at
-        timestamp accepted_at
-        uuid invited_by_user_id FK
-    }
-
-    TWO_FACTOR_AUTH {
-        uuid id PK
-        uuid user_id FK
-        string secret_key "Encrypted TOTP secret"
-        timestamp enabled_at
-    }
-
-    LOGIN_AUDIT {
-        uuid id PK
-        uuid user_id FK
-        string ip_address
-        string user_agent
-        boolean success
-        timestamp attempted_at
-    }
-
-    CUSTOMER {
-        uuid id PK
-        string name
-        string phone
-        string address
-        string email
-        string customer_type "FARMER / BUTCHER / RETAIL"
-        decimal credit_limit "Max credit allowed"
-        decimal current_total_balance
-        timestamp registered_at
-    }
-    PRODUCT {
-        uuid id PK
-        string name
-        string category "FEED / MEDICINE / LIVE_CHICK / MEAT / EGGS"
-        decimal cost_price "What you paid"
-        decimal selling_price "Standard price"
-        string unit "KG / BAG / TRAY / PIECE"
-        int current_stock
-    }
-    SALE {
-        uuid id PK
-        uuid customer_id FK
-        uuid created_by_user_id FK
-        decimal total_bill_amount
-        decimal initial_paid_amount
-        decimal remaining_balance
-        string payment_status "FULLY_PAID / PARTIAL / UNPAID"
-        string sale_channel "POS / WHATSAPP / FIELD"
-        timestamp created_at
-    }
-    SALE_ITEM {
-        uuid id PK
-        uuid sale_id FK
-        uuid product_id FK
-        int quantity
-        decimal unit_price "Price at time of sale"
-        decimal line_total
-    }
-    PAYMENT_TRANSACTION {
-        uuid id PK
-        uuid sale_id FK
-        uuid customer_id FK
-        decimal amount_paid
-        string payment_method "CASH / CHECK / TRANSFER"
-        timestamp payment_date
-    }
-    CREDIT_LEDGER {
-        uuid id PK
-        uuid customer_id FK
-        uuid sale_id FK "Optional"
-        uuid purchase_id FK "Optional, for credits from deliveries"
-        decimal original_debt "Can be negative for credits"
-        decimal current_balance "Can be negative"
-        timestamp due_date
-        string status "ACTIVE / CLEARED / CREDIT"
-        string remarks
-    }
-    PURCHASE {
-        uuid id PK
-        uuid product_id FK
-        uuid customer_id FK
-        uuid created_by_user_id FK
-        string supplier_name
-        int quantity
-        decimal total_cost
-        timestamp purchase_date
-    }
-    BILL_IMAGE {
-        uuid id PK
-        uuid sale_id FK
-        string s3_url
-        json extracted_json "AI output stored here"
-        timestamp uploaded_at
-    }
-    STOCK_ADJUSTMENT {
-        uuid id PK
-        uuid product_id FK
-        int adjustment_quantity "Positive to add, negative to deduct"
-        string adjustment_type "DAMAGE / THEFT / COUNT_ERROR / EXPIRY / GIFT / OTHER"
-        string reason
-        timestamp adjusted_at
-        uuid adjusted_by_user_id FK
-    }
+    Sale ||--|{ SaleItem : "contains"
+    Product ||--|{ SaleItem : "is_sold_in"
+    Customer ||--|{ CreditLedger : "has"
+    Sale |o--o| CreditLedger : "linked_to"
+    Purchase ||--|{ CreditLedger : "generates"
+    Customer ||--|{ Sale : "purchases"
+    User ||--|{ Sale : "creates"
+    Product ||--|{ StockAdjustment : "has"
+    User ||--|{ StockAdjustment : "performs"
+    Sale ||--|{ PaymentTransaction : "has"
+    Customer ||--|{ PaymentTransaction : "makes"
+    Product ||--|{ Purchase : "is_bought_in"
+    Customer ||--|{ Purchase : "involved_in"
+    User ||--|{ Purchase : "records"
+    User ||--|| TwoFactorAuth : "has"
+    Role ||--|{ Invitation : "assigned_in"
+    User ||--|{ Invitation : "creates"
+    User ||--|{ LoginAudit : "has"
+    User }|--|{ Role : "has"
 ```
 
 ---
 
 ## 4. Infrastructure Diagram
-Describes how the app is hosted on AWS.
+Describes how the app is hosted on Google Cloud Platform.
 
 ```mermaid
 graph TD
-    User((User/Farmer)) -->|HTTPS| Frontend[AWS Amplify - React PWA]
-    Frontend -->|API Calls| Backend[AWS EC2/ECS - Spring Boot]
-    Backend -->|SQL Queries| DB[(AWS RDS - PostgreSQL + pgvector)]
-    Backend -->|Local Inference| AI_Server[AWS EC2 G4dn - Ollama/Llama3]
-    AI_Server -->|Vision/OCR| Backend
-    Backend -->|Store Images| S3[AWS S3 Bucket]
+    User((User/Farmer)) -->|HTTPS| Frontend[Firebase Hosting - React PWA]
+    Frontend -->|API Calls| Backend[Cloud Run - Spring Boot]
+    Backend -->|SQL Queries| DB[(AlloyDB - PostgreSQL + pgvector)]
+    Backend -->|API Requests| AI[Gemini API - Vision & Chat]
+    AI -->|Responses| Backend
+    Backend -->|Store Images| Storage[Cloud Storage]
 ```
 
 ---
@@ -308,9 +292,9 @@ graph TD
 ## 6. Execution Roadmap
 1.  **Phase 1 (Core):** Setup Spring Boot + PostgreSQL. Build basic CRUD for Products and Customers.
 2.  **Phase 2 (Finance):** Implement Sale/Purchase logic and Profit/Loss calculation scripts.
-3.  **Phase 3 (AI Vision):** Setup Ollama with `llama3.2-vision`. Build the Java service to process images into JSON.
+3.  **Phase 3 (AI Vision):** Integrate Gemini API with `gemini-1.5-flash`. Build the Java service to process images into JSON.
 4.  **Phase 4 (RAG):** Implement `pgvector` and LangChain4j to allow "Smart Business Ask" features.
-5.  **Phase 5 (Cloud):** Deploy to AWS and configure the PWA for offline mobile use.
+5.  **Phase 5 (Cloud):** Deploy to GCP (Cloud Run + Firebase) and configure the PWA for offline mobile use.
 
 ---
 
@@ -409,7 +393,7 @@ firebase hosting:rollback --site=YOUR_SITE_ID
 ## 7. Future AI Context Summary
 **Copy and paste this paragraph the next time you start a chat with an AI to resume work:**
 
-> "I am building **FarmSmart AI**, a poultry farm billing and ERP app. **Tech Stack:** Java (Spring Boot), React, and PostgreSQL with pgvector. **Hosting:** AWS (Amplify, RDS, EC2 with GPU). **Key Features:** Credit/Cash sales management, inventory tracking, and profit analysis. It uses a **self-hosted LLM (Ollama/Llama 3)** for two main AI features: 
-> 1. **RAG/Text-to-SQL** for 'Smart Business Ask' (e.g., forecasting sales, querying credit totals). 
-> 2. **Multimodal Vision** for extracting sales details from photos of physical bills. 
-> I have the ERD and Infrastructure plan ready. Please help me with the next step of the implementation."
+> "I am building **FarmSmart AI**, a poultry farm billing and ERP app. **Tech Stack:** Java 21 (Spring Boot 3.x), React (Vite PWA), and AlloyDB (PostgreSQL with pgvector). **Hosting:** GCP (Cloud Run for backend, Firebase Hosting for frontend, AlloyDB for database). **Key Features:** Credit/Cash sales management, inventory tracking, and profit analysis. It uses **Google Gemini API** for two main AI features: 
+> 1. **RAG/Intent-Based Query** for 'Smart Business Ask' (e.g., forecasting sales, querying credit totals) using hardcoded SQL templates for safety. 
+> 2. **Multimodal Vision** for extracting sales details from photos of physical bills using Gemini 1.5 Flash. 
+> The app has OAuth2 (Google) authentication, invitation-based user registration, and 2FA support. I have the ERD and Infrastructure plan ready. Please help me with the next step of the implementation."

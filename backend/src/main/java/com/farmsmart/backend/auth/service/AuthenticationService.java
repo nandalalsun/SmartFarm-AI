@@ -213,7 +213,7 @@ public class AuthenticationService {
         
         if (principal instanceof UserDetails) {
             String email = ((UserDetails) principal).getUsername();
-            User user = userRepository.findByEmail(email)
+            userRepository.findByEmail(email)
                     .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
             
             String secretKey = totpService.generateSecretKey();
