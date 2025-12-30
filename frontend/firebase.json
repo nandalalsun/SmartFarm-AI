@@ -8,10 +8,6 @@
     ],
     "rewrites": [
       {
-        "source": "/api/**",
-        "destination": "PLACEHOLDER_API_URL"
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
