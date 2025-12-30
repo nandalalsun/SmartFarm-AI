@@ -7,4 +7,6 @@ import java.util.UUID;
 
 public interface CreditLedgerRepository extends JpaRepository<CreditLedger, UUID> {
     List<CreditLedger> findByCustomerId(UUID customerId);
+    
+    List<CreditLedger> findByCustomerIdAndStatusInOrderByDueDateAsc(UUID customerId, List<String> statuses);
 }

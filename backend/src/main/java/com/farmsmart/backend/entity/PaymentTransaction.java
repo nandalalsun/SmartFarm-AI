@@ -16,15 +16,17 @@ public class PaymentTransaction {
 
     @ManyToOne
     @JsonBackReference
-    private Sale sale;
+    private Sale sale; // Nullable - allows payments without specific sale
 
     @ManyToOne(optional = false)
     private Customer customer;
 
     private BigDecimal amountPaid;
     
-    // CASH / CHECK / TRANSFER
+    // CASH / CHECK / ESEWA / CARD
     private String paymentMethod;
+    
+    private String remarks; // Optional notes about the payment
     
     private LocalDateTime paymentDate;
 

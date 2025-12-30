@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
+import SettleBalanceModal from '../components/SettleBalanceModal'; // Import Modal
 
 import {
   AreaChart,
@@ -36,6 +37,10 @@ const Dashboard = () => {
 
   const [loading, setLoading] = useState(true);
   const [insightsLoading, setInsightsLoading] = useState(true);
+  
+  // Settle Modal State
+  const [settleModalOpen, setSettleModalOpen] = useState(false);
+  const [selectedCustomerForSettle, setSelectedCustomerForSettle] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -78,6 +83,24 @@ const Dashboard = () => {
     } finally {
       setInsightsLoading(false);
     }
+  };
+
+  const handleSettleClick = (creditItem) => {
+    // We need customer ID and current balance. 
+    // Assuming aging credit API returns customerId and balance. 
+    // If not, we might need to adjust or fetch customer details.
+    // Based on DTO, aging credit likely maps from CreditLedger which has Customer.
+    // Let's assume the item has customerId and name.
+    
+    // We construct a partial customer object for the modal
+    const customer = {
+      id: creditItem.customerId, // Ensure backend DTO provides this
+      name: creditItem.name,
+      currentTotalBalance: creditItem.current_balance // or fetch fresh balance inside modal
+    };
+    
+    setSelectedCustomerForSettle(customer);
+    setSettleModalOpen(true);
   };
 
   if (loading) {
@@ -264,12 +287,20 @@ const Dashboard = () => {
 
               <div className="space-y-3">
                 {agingCredits.map((item, idx) => (
-                  <div key={idx} className="flex justify-between bg-slate-800/50 p-3 rounded">
+                  <div key={idx} className="flex justify-between items-center bg-slate-800/50 p-3 rounded group hover:bg-slate-800 transition-colors">
                     <div>
                       <div className="text-sm">{item.name}</div>
                       <div className="text-xs text-rose-400">Due: {item.due_date}</div>
                     </div>
-                    <span className="font-mono">₹{item.current_balance}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono">₹{item.current_balance}</span>
+                      <button 
+                        onClick={() => handleSettleClick(item)}
+                        className="opacity-0 group-hover:opacity-100 bg-violet-600 hover:bg-violet-700 text-white text-xs px-2 py-1 rounded transition-all"
+                      >
+                        Settle
+                      </button>
+                    </div>
                   </div>
                 ))}
 
@@ -280,6 +311,17 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Settle Modal Integration */}
+        {settleModalOpen && selectedCustomerForSettle && (
+          <SettleBalanceModal 
+            customer={selectedCustomerForSettle}
+            onClose={() => setSettleModalOpen(false)}
+            onSuccess={() => {
+              fetchDashboardData();
+            }}
+          />
+        )}
       </div>
     </div>
   );

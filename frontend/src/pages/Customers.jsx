@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import Toast from '../components/Toast';
 
+import SettleBalanceModal from '../components/SettleBalanceModal';
+
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [form, setForm] = useState({
@@ -14,6 +16,7 @@ export default function Customers() {
   });
   const [toast, setToast] = useState({ message: '', type: '' });
   const [profitModalOpen, setProfitModalOpen] = useState(false);
+  const [settleModalOpen, setSettleModalOpen] = useState(false); // New state for settle modal
   const [profitData, setProfitData] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [search, setSearch] = useState('');
@@ -56,6 +59,11 @@ export default function Customers() {
       console.error('Failed to fetch profit', err);
       setToast({ message: 'Failed to fetch profit report', type: 'error' });
     }
+  };
+
+  const handleSettle = (customer) => {
+    setSelectedCustomer(customer);
+    setSettleModalOpen(true);
   };
 
   const handleSubmit = async e => {
@@ -259,13 +267,21 @@ export default function Customers() {
                 <td className="px-6 py-4 whitespace-nowrap text-emerald-400 font-mono">
                   ${c.currentTotalBalance}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end gap-3">
+                  {c.currentTotalBalance > 0 && (
+                    <button
+                      onClick={() => handleSettle(c)}
+                      className="text-emerald-400 hover:text-emerald-300 font-medium text-sm flex items-center gap-1 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20 transition-all hover:bg-emerald-500/20"
+                    >
+                      <span className="text-xs">Settle</span>
+                    </button>
+                  )}
                   {c.customerType === 'FARMER' && (
                     <button
                       onClick={() => handleViewProfit(c)}
-                      className="text-violet-400 hover:text-violet-300 font-medium text-sm"
+                      className="text-white hover:text-violet-300 font-medium text-sm"
                     >
-                      View Profit
+                      Profit
                     </button>
                   )}
                 </td>
@@ -338,6 +354,18 @@ export default function Customers() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Settle Balance Modal */}
+      {settleModalOpen && selectedCustomer && (
+        <SettleBalanceModal
+          customer={selectedCustomer}
+          onClose={() => setSettleModalOpen(false)}
+          onSuccess={() => {
+            fetchCustomers();
+            setToast({ message: '✓ Balance settled successfully!', type: 'success' });
+          }}
+        />
       )}
     </div>
   );
