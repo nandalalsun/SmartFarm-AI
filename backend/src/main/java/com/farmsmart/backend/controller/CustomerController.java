@@ -21,12 +21,13 @@ public class CustomerController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ROLE_OWNER', 'ROLE_MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'SALES', 'STAFF')")
     public Customer create(@RequestBody Customer customer) {
         return service.createCustomer(customer);
     }
 
     @GetMapping("/{id}/profit")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'ACCOUNTANT')")
     public java.util.Map<String, Object> getProfit(@PathVariable java.util.UUID id) {
         return financeService.getFarmerProfit(id);
     }
