@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 
 const AuthContext = createContext(null);
 
@@ -29,20 +29,11 @@ export const AuthProvider = ({ children }) => {
         const fetchUser = async () => {
             if (token) {
                 try {
-                    // Import dynamically or assume it's available via module scope if we imported at top
-                    // But we can't change imports with this tool easily in one go if we don't include top. 
-                    // Let's assume we will add import in next step or use global axios if needed, 
-                    // but better to use authService. 
-                    
-                    // Since I can't easily add the import line with this chunk, I will use axios directly for now 
-                    // matching the existing pattern, OR I should have added the import. 
-                    // Let's rely on axios being imported.
-                    const response = await axios.get('http://localhost:8080/api/auth/me');
+                    const response = await api.get('/auth/me');
                     setUser(response.data);
                 } catch (error) {
                     console.error("Failed to fetch user", error);
-                    // If 401, maybe logout?
-                    // logout(); 
+                    logout(); 
                 } finally {
                     setLoading(false);
                 }
