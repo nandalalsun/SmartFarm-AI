@@ -212,7 +212,7 @@ export default function Transactions() {
             : null,
       };
 
-      await api.post('/finance/purchase', payload);
+      await api.post('/purchases', payload);
       setPurchaseModalOpen(false);
       // Reset form
       setPurchaseForm({

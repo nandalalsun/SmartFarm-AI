@@ -58,6 +58,8 @@ public class AuthSecurityConfig {
                 // Public auth endpoints
                 .requestMatchers("/api/auth/login", "/api/auth/signup", "/api/auth/verify-2fa", 
                                 "/api/auth/refresh", "/api/auth/invitations/validate/**").permitAll()
+                // Public error endpoint (to handle exceptions correctly)
+                .requestMatchers("/error").permitAll()
                 // Public legal pages  
                 .requestMatchers("/api/legal/**").permitAll()
                 // OAuth2 endpoints

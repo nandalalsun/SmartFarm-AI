@@ -22,11 +22,11 @@ public class FinanceController {
     @Autowired private ReportService reportService;
     @Autowired private com.farmsmart.backend.service.PaymentSettlementService paymentSettlementService;
 
-    @PostMapping("/payments/settle")
+    @PostMapping("/settlements")
     @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'ACCOUNTANT')")
-    public ResponseEntity<com.farmsmart.backend.dto.SettlePaymentResponse> settlePayment(
-            @RequestBody @jakarta.validation.Valid com.farmsmart.backend.dto.SettlePaymentRequest request) {
-        return ResponseEntity.ok(paymentSettlementService.settlePayment(request));
+    public ResponseEntity<com.farmsmart.backend.entity.PaymentTransaction> createSettlement(
+            @RequestBody @jakarta.validation.Valid com.farmsmart.backend.dto.SettlementRequestDTO request) {
+        return ResponseEntity.ok(paymentSettlementService.processSettlement(request));
     }
 
     @GetMapping("/customers/{customerId}/unpaid-sales")
