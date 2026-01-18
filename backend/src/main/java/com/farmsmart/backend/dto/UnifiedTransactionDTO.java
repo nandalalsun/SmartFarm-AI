@@ -16,4 +16,6 @@ public class UnifiedTransactionDTO {
     private BigDecimal paidAmount;
     private BigDecimal balance;
     private String status;
+    private Integer quantity;
+    private BigDecimal weight;
 }

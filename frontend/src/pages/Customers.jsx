@@ -264,14 +264,27 @@ export default function Customers() {
                 <td className="px-6 py-4 whitespace-nowrap text-white">{c.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-slate-300">{c.customerType}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-slate-300">{c.phone}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-emerald-400 font-mono">
-                  ${c.currentTotalBalance}
+                <td className={`px-6 py-4 whitespace-nowrap font-mono font-medium ${
+                  c.currentTotalBalance > 0 
+                    ? 'text-emerald-400' 
+                    : c.currentTotalBalance < 0 
+                      ? 'text-rose-400' 
+                      : 'text-slate-500'
+                }`}>
+                  {c.currentTotalBalance > 0 ? '+' : c.currentTotalBalance < 0 ? '-' : ''}${Math.abs(c.currentTotalBalance || 0).toLocaleString()}
+                  <span className="text-[10px] ml-1 opacity-70 uppercase">
+                    {c.currentTotalBalance > 0 ? 'Recv' : c.currentTotalBalance < 0 ? 'Pay' : ''}
+                  </span>
                 </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end gap-3">
-                  {c.currentTotalBalance > 0 && (
+                  {Math.abs(c.currentTotalBalance) > 0.01 && (
                     <button
                       onClick={() => handleSettle(c)}
-                      className="text-emerald-400 hover:text-emerald-300 font-medium text-sm flex items-center gap-1 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20 transition-all hover:bg-emerald-500/20"
+                      className={`${
+                        c.currentTotalBalance > 0 
+                          ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20' 
+                          : 'text-rose-400 bg-rose-500/10 border-rose-500/20 hover:bg-rose-500/20'
+                      } font-medium text-sm flex items-center gap-1 px-3 py-1.5 rounded-lg border transition-all`}
                     >
                       <span className="text-xs">Settle</span>
                     </button>

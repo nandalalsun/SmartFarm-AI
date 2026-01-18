@@ -15,7 +15,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -45,14 +45,21 @@ public class PaymentSettlementService {
         }
         
         // 3. Update Customer Balance (Running Balance Approach)
-        // Logic: Payment reduces balance (assuming positive balance = debt). 
-        // Example: Bill 1000. Pay 100. Balance 900.
-        // If balance is negative (Credit/Payable), Adding payment (spending?) -> No, 'Payment' usually means INCOMING cash in this context (Receiving).
-        // If this is a Payout (Outgoing), amount should effectively be negative or handled as such.
-        // However, user said "Payments made... are General Payments... Reduces balance".
-        // So we stick to: Balance = Balance - Amount.
+        // Logic: 
+        // If balance > 0 (They owe US): Payment reduces balance (Subtract).
+        // If balance < 0 (WE owe THEM): We pay them, moves balance toward zero (Add).
         
-        customer.setCurrentTotalBalance(customer.getCurrentTotalBalance().subtract(request.getAmount()));
+        BigDecimal currentBalance = customer.getCurrentTotalBalance();
+        if (currentBalance == null) currentBalance = BigDecimal.ZERO;
+
+        if (currentBalance.compareTo(BigDecimal.ZERO) < 0) {
+            // We owe them. Payment to them (Payout) should increase balance toward 0.
+            customer.setCurrentTotalBalance(currentBalance.add(request.getAmount()));
+        } else {
+            // They owe us. Payment from them should decrease balance toward 0.
+            customer.setCurrentTotalBalance(currentBalance.subtract(request.getAmount()));
+        }
+        
         customerRepository.save(customer);
         
         PaymentTransaction savedTxn = paymentTransactionRepository.save(txn);

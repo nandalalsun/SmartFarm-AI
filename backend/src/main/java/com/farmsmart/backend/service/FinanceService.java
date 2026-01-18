@@ -119,64 +119,68 @@ public class FinanceService {
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
-        // Increment Stock
-        product.setCurrentStock(product.getCurrentStock() + request.getQuantity());
-        productRepository.save(product);
+        // Increment Stock (Count based as per user request)
+        if (request.getQuantity() != null) {
+            product.setCurrentStock(product.getCurrentStock() + request.getQuantity());
+            productRepository.save(product);
+        }
 
         Purchase purchase = new Purchase();
         purchase.setProduct(product);
         purchase.setQuantity(request.getQuantity());
+        purchase.setUnitPrice(request.getUnitPrice());
+        purchase.setWeight(request.getWeight());
         purchase.setTotalCost(request.getTotalCost());
+        purchase.setInitialPaidAmount(request.getInitialPaidAmount() != null ? request.getInitialPaidAmount() : BigDecimal.ZERO);
         
+        BigDecimal remaining = request.getTotalCost().subtract(purchase.getInitialPaidAmount());
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
+        purchase.setRemainingBalance(remaining);
+
         if (request.getCustomerId() != null) {
             Customer customer = customerRepository.findById(request.getCustomerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
             
-            // Validate Farmer
             if (!"FARMER".equals(customer.getCustomerType())) {
                 throw new IllegalArgumentException("Only FARMER customers can be linked to purchases");
             }
 
             purchase.setCustomer(customer);
 
-            // Update Ledger (Credit)
-            CreditLedger ledger = new CreditLedger();
-            ledger.setCustomer(customer);
-            ledger.setPurchase(purchase);
-            ledger.setOriginalDebt(request.getTotalCost().negate()); // Negative debt = Credit
-            ledger.setCurrentBalance(request.getTotalCost().negate());
-            ledger.setStatus("CREDIT");
-            ledger.setDueDate(LocalDate.now()); // Immediate?
-            creditLedgerRepository.save(ledger);
+            // Record Ledger Entry for the REMAINING balance
+            if (remaining.compareTo(BigDecimal.ZERO) > 0) {
+                CreditLedger ledger = new CreditLedger();
+                ledger.setCustomer(customer);
+                ledger.setPurchase(purchase);
+                ledger.setOriginalDebt(remaining.negate()); // Negative debt = Credit
+                ledger.setCurrentBalance(remaining.negate());
+                ledger.setStatus("CREDIT");
+                ledger.setDueDate(LocalDate.now());
+                creditLedgerRepository.save(ledger);
 
-            // Update Customer Balance (Subtract cost from balance)
-            customer.setCurrentTotalBalance(customer.getCurrentTotalBalance().subtract(request.getTotalCost()));
-            
-            // Check for Profit Payout (Negative Balance)
-            if (customer.getCurrentTotalBalance().compareTo(BigDecimal.ZERO) < 0) {
-                 BigDecimal profitToPay = customer.getCurrentTotalBalance().abs();
-                 
-                 // Create Payment Transaction
-                 PaymentTransaction txn = new PaymentTransaction();
-                 txn.setCustomer(customer);
-                 txn.setAmountPaid(profitToPay);
-                 txn.setPaymentMethod("PROFIT_SETTLEMENT");
-                 // txn.setSale(null); // Optional now
-                 paymentTransactionRepository.save(txn);
-                 
-                 // Reset Balance to 0 (since we paid it out)
-                 customer.setCurrentTotalBalance(BigDecimal.ZERO);
-                 
-                 // Mark ledger as CLEARED? Or keep track? 
-                 // For simplicity, we just zero out the balance and assume paid. 
+                // Update Customer Balance (Subtract REMAINING cost from balance)
+                customer.setCurrentTotalBalance(customer.getCurrentTotalBalance().subtract(remaining));
+                customerRepository.save(customer);
             }
-            customerRepository.save(customer);
-
         } else {
             purchase.setSupplierName(request.getSupplierName());
         }
-        
-        return purchaseRepository.save(purchase);
+
+        Purchase savedPurchase = purchaseRepository.save(purchase);
+
+        // Record Initial Payment Transaction if any
+        if (purchase.getInitialPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
+            PaymentTransaction txn = new PaymentTransaction();
+            txn.setPurchase(savedPurchase);
+            if (savedPurchase.getCustomer() != null) {
+                txn.setCustomer(savedPurchase.getCustomer());
+            }
+            txn.setAmountPaid(purchase.getInitialPaidAmount());
+            txn.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "CASH");
+            paymentTransactionRepository.save(txn);
+        }
+
+        return savedPurchase;
     }
 
     public Map<String, Object> getFarmerProfit(java.util.UUID customerId) {
@@ -267,7 +271,11 @@ public class FinanceService {
         }
         dto.setProductName(purchase.getProduct().getName());
         dto.setQuantity(purchase.getQuantity());
+        dto.setUnitPrice(purchase.getUnitPrice());
+        dto.setWeight(purchase.getWeight());
         dto.setTotalCost(purchase.getTotalCost());
+        dto.setInitialPaidAmount(purchase.getInitialPaidAmount());
+        dto.setRemainingBalance(purchase.getRemainingBalance());
         return dto;
     }
 
@@ -313,12 +321,17 @@ public class FinanceService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add) 
                 : BigDecimal.ZERO;
             
-            if (totalPaid.compareTo(BigDecimal.ZERO) == 0 && sale.getInitialPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
+            if (totalPaid.compareTo(BigDecimal.ZERO) == 0 && sale.getInitialPaidAmount() != null) {
                 totalPaid = sale.getInitialPaidAmount();
             }
             
             dto.setPaidAmount(totalPaid);
-            dto.setBalance(sale.getRemainingBalance());
+            
+            BigDecimal balance = sale.getRemainingBalance();
+            if (balance == null) {
+                balance = sale.getTotalBillAmount().subtract(totalPaid);
+            }
+            dto.setBalance(balance);
             dto.setStatus(sale.getPaymentStatus());
             unifiedList.add(dto);
         }
@@ -344,9 +357,35 @@ public class FinanceService {
             }
             
             dto.setAmount(purchase.getTotalCost());
-            dto.setPaidAmount(purchase.getTotalCost()); 
-            dto.setBalance(BigDecimal.ZERO);
-            dto.setStatus("COMPLETED");
+            
+            BigDecimal totalPaid = purchase.getPaymentTransactions() != null ? 
+                purchase.getPaymentTransactions().stream()
+                    .map(PaymentTransaction::getAmountPaid)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add) 
+                : BigDecimal.ZERO;
+            
+            if (totalPaid.compareTo(BigDecimal.ZERO) == 0 && purchase.getInitialPaidAmount() != null) {
+                totalPaid = purchase.getInitialPaidAmount();
+            }
+
+            dto.setPaidAmount(totalPaid);
+            
+            BigDecimal balance = purchase.getRemainingBalance();
+            if (balance == null) {
+                balance = purchase.getTotalCost().subtract(totalPaid);
+            }
+            dto.setBalance(balance);
+            
+            if (balance.compareTo(BigDecimal.ZERO) == 0) {
+                dto.setStatus("COMPLETED");
+            } else if (balance.compareTo(purchase.getTotalCost()) == 0) {
+                dto.setStatus("UNPAID");
+            } else {
+                dto.setStatus("PARTIAL");
+            }
+
+            dto.setQuantity(purchase.getQuantity());
+            dto.setWeight(purchase.getWeight());
             unifiedList.add(dto);
         }
 

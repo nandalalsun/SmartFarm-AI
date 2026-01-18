@@ -169,7 +169,7 @@ export default function BillScanner() {
       setModalFormData({
         customerId: '',
         paymentMethod: 'CASH',
-        initialPaidAmount: extractedData.total_amount || '',
+        initialPaidAmount: 0,
         items: items,
       });
     }
@@ -215,8 +215,42 @@ export default function BillScanner() {
   };
 
   const handleSavePurchase = async () => {
-    // TODO: Implement purchase logic when backend endpoint is ready
-    setToast({ message: 'Purchase saving not yet implemented', type: 'error' });
+    setLoading(true);
+    try {
+      if (modalFormData.items.length === 0) throw new Error('No items to save');
+      
+      // For purchases, we only support one product per purchase in the current backend schema
+      // So we'll take the first item that has a productId
+      const firstItem = modalFormData.items.find(item => item.productId);
+      if (!firstItem) throw new Error('Please select at least one matched product');
+
+      const payload = {
+        productId: firstItem.productId,
+        quantity: firstItem.quantity,
+        unitPrice: firstItem.unitPrice,
+        totalCost: calculateModalTotal(),
+        initialPaidAmount: parseFloat(modalFormData.initialPaidAmount) || 0,
+        paymentMethod: modalFormData.paymentMethod,
+        customerId: modalFormData.customerId || null,
+        supplierName: extractedData.customer_name || 'Scanned Supplier'
+      };
+
+      await axios.post('/purchases', payload);
+      setToast({ message: '✓ Purchase recorded successfully!', type: 'success' });
+      setShowModal(false);
+      setSelectedImage(null);
+      setPreviewUrl(null);
+      setExtractedData(null);
+
+      fetchCustomersAndProducts();
+    } catch (err) {
+      setToast({
+        message: err.response?.data?.message || err.message || 'Failed to save purchase',
+        type: 'error',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const calculateModalTotal = () => {
@@ -725,11 +759,11 @@ export default function BillScanner() {
                               onChange={e => updateModalItem(idx, 'productId', e.target.value)}
                             >
                               <option value="">Select Product...</option>
-                              {products.map(p => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name} (₹{p.sellingPrice})
-                                </option>
-                              ))}
+                                {products.map(p => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.name} (${p.sellingPrice})
+                                  </option>
+                                ))}
                             </select>
                             {!item.productId && (
                               <p className="text-xs text-yellow-400 mt-1">
@@ -758,7 +792,7 @@ export default function BillScanner() {
                             />
                           </td>
                           <td className="p-3 text-right font-mono text-emerald-400">
-                            ₹{item.lineTotal.toFixed(2)}
+                            ${item.lineTotal.toFixed(2)}
                           </td>
                         </tr>
                       ))}
@@ -771,7 +805,7 @@ export default function BillScanner() {
               <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-slate-400 mb-2">Paid Amount (₹)</label>
+                    <label className="block text-sm text-slate-400 mb-2">Paid Amount ($)</label>
                     <input
                       type="number"
                       className="w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:border-violet-500 outline-none"
@@ -786,7 +820,7 @@ export default function BillScanner() {
                     <div className="bg-slate-900 p-3 rounded-lg">
                       <p className="text-xs text-slate-400 mb-1">Total Amount</p>
                       <p className="text-2xl font-bold text-emerald-400">
-                        ₹{calculateModalTotal().toFixed(2)}
+                        ${calculateModalTotal().toFixed(2)}
                       </p>
                     </div>
                   </div>

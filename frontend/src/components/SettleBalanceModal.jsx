@@ -106,7 +106,7 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
             <div>
               <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Total Outstanding</p>
               <div className="text-3xl font-mono font-bold text-white flex items-baseline gap-1">
-                <span className="text-lg text-slate-500">₹</span>
+                <span className="text-lg text-slate-500">$</span>
                 {customer.currentTotalBalance?.toLocaleString()}
               </div>
             </div>
@@ -115,7 +115,7 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
               <div className="text-right animate-in slide-in-from-right-4 duration-300">
                 <p className="text-emerald-400 text-sm font-medium mb-1">After Payment</p>
                 <div className="text-2xl font-mono font-bold text-emerald-400 flex items-baseline justify-end gap-1">
-                  <span className="text-sm opacity-60">₹</span>
+                  <span className="text-sm opacity-60">$</span>
                   {calculatePreview().newBalance?.toLocaleString()}
                 </div>
               </div>
@@ -131,13 +131,13 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
                 Payment Amount <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-lg">₹</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-lg">$</span>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  min="1"
+                  min="0.01"
                   // Max validation removed as we might want to overpay (Credit)
                   step="0.01"
                   required
@@ -150,7 +150,7 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
                  <div className="mt-3 bg-slate-800/50 p-3 rounded-lg flex justify-between items-center text-sm border border-slate-700/50">
                     <span className="text-slate-400">New Balance Estimate:</span>
                     <span className={`font-mono font-bold ${calculatePreview().newBalance < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                        ₹{Math.abs(calculatePreview().newBalance).toLocaleString()}
+                        ${Math.abs(calculatePreview().newBalance).toLocaleString()}
                         <span className="text-xs opacity-60 ml-1">
                             {calculatePreview().newBalance < 0 ? '(Payable)' : '(Receivable)'}
                         </span>

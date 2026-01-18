@@ -31,9 +31,13 @@ export default function Transactions() {
     productId: '',
     quantity: '',
     unitPrice: '',
+    weight: '',
+    calcMethod: 'quantity', // 'quantity' or 'weight'
     totalCost: '',
     customerId: '',
     supplierName: '',
+    initialPaidAmount: '0',
+    paymentMethod: 'CASH',
   });
 
   const printRef = useRef();
@@ -150,11 +154,11 @@ export default function Transactions() {
     // Net Outstanding Logic: (Who owes money?)
     const totalReceivables = data
       .filter(d => d.type === 'SALE')
-      .reduce((sum, item) => sum + (item.balance || 0), 0);
+      .reduce((sum, item) => sum + (parseFloat(item.balance) || 0), 0);
     
     const totalPayables = data
       .filter(d => d.type === 'PURCHASE')
-      .reduce((sum, item) => sum + (item.balance || 0), 0);
+      .reduce((sum, item) => sum + (parseFloat(item.balance) || 0), 0);
 
     const netOutstanding = totalReceivables - totalPayables;
 
@@ -199,12 +203,18 @@ export default function Transactions() {
   const handleCreatePurchase = async e => {
     e.preventDefault();
     try {
+      const totalCostCalculation = purchaseForm.calcMethod === 'weight'
+        ? (parseFloat(purchaseForm.weight) || 0) * (parseFloat(purchaseForm.unitPrice) || 0)
+        : (parseFloat(purchaseForm.quantity) || 0) * (parseFloat(purchaseForm.unitPrice) || 0);
+
       const payload = {
         productId: purchaseForm.productId,
-        quantity: parseInt(purchaseForm.quantity),
-        unitPrice: parseFloat(purchaseForm.unitPrice),
-        totalCost:
-          (parseFloat(purchaseForm.quantity) || 0) * (parseFloat(purchaseForm.unitPrice) || 0),
+        quantity: parseInt(purchaseForm.quantity) || 0,
+        weight: parseFloat(purchaseForm.weight) || 0,
+        unitPrice: parseFloat(purchaseForm.unitPrice) || 0,
+        totalCost: totalCostCalculation,
+        initialPaidAmount: parseFloat(purchaseForm.initialPaidAmount) || 0,
+        paymentMethod: purchaseForm.paymentMethod,
         supplierName: purchaseForm.supplierName || null,
         customerId:
           purchaseForm.customerId && purchaseForm.customerId !== 'select'
@@ -219,9 +229,13 @@ export default function Transactions() {
         productId: '',
         quantity: '',
         unitPrice: '',
+        weight: '',
+        calcMethod: 'quantity',
         totalCost: '',
         customerId: '',
         supplierName: '',
+        initialPaidAmount: '0',
+        paymentMethod: 'CASH',
       });
       fetchLedger();
     } catch (err) {
@@ -232,13 +246,11 @@ export default function Transactions() {
 
   // -- Drawer Logic --
   const openDrawer = record => {
-    // Only open drawer for Sales (Purchases allow less detail for now)
-    if (record.type === 'SALE') {
-      fetchSaleDetails(record.id);
-    }
+    // Open drawer for both Sales and Purchases
+    fetchTransactionDetails(record.id);
   };
 
-  const fetchSaleDetails = async id => {
+  const fetchTransactionDetails = async id => {
     try {
       setSelectedRecord({ ...ledgerData.find(d => d.id === id) });
       setDrawerOpen(true);
@@ -400,7 +412,7 @@ export default function Transactions() {
           <p className="text-slate-400 text-sm font-medium mb-1">Total Sales</p>
           <div className="flex items-baseline gap-2">
             <h3 className="text-3xl font-bold text-white">
-              ₹{summary.totalSales.toLocaleString('en-IN')}
+              ${summary.totalSales.toLocaleString()}
             </h3>
             <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
               Revenue
@@ -411,7 +423,7 @@ export default function Transactions() {
           <p className="text-slate-400 text-sm font-medium mb-1">Total Purchases</p>
           <div className="flex items-baseline gap-2">
             <h3 className="text-3xl font-bold text-white">
-              ₹{summary.totalPurchases.toLocaleString('en-IN')}
+              ${summary.totalPurchases.toLocaleString()}
             </h3>
             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400">
               Expense
@@ -424,7 +436,7 @@ export default function Transactions() {
             <h3
               className={`text-3xl font-bold ${summary.netOutstanding >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
             >
-              {summary.netOutstanding >= 0 ? '' : ''}₹{Math.abs(summary.netOutstanding || 0).toLocaleString('en-IN')}
+              {summary.netOutstanding >= 0 ? '' : '-'}${Math.abs(summary.netOutstanding || 0).toLocaleString()}
             </h3>
             <span className={`text-xs px-2 py-0.5 rounded-full ${summary.netOutstanding >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
               {summary.netOutstanding >= 0 ? 'Receivable (Owed to You)' : 'Payable (You Owe)'}
@@ -503,13 +515,13 @@ export default function Transactions() {
                       )}
                     </td>
                     <td className="p-4 text-right text-sm font-mono text-white">
-                      ₹{row.amount?.toLocaleString('en-IN')}
+                      ${row.amount?.toLocaleString()}
                     </td>
                     <td className="p-4 text-right text-sm font-mono text-emerald-400">
-                      ₹{row.paidAmount?.toLocaleString('en-IN')}
+                      ${(row.paidAmount || 0).toLocaleString()}
                     </td>
                     <td className="p-4 text-right text-sm font-mono text-rose-400">
-                      ₹{row.balance?.toLocaleString('en-IN')}
+                      ${(row.balance || 0).toLocaleString()}
                     </td>
                     <td className="p-4 text-center">
                       <span
@@ -651,23 +663,55 @@ export default function Transactions() {
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-slate-400 mb-1.5 ml-1">
+                      Calculation Method
+                    </label>
+                    <select
+                      value={purchaseForm.calcMethod}
+                      onChange={e => setPurchaseForm({ ...purchaseForm, calcMethod: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none focus:border-violet-500"
+                    >
+                      <option value="quantity">Price × Quantity (Pieces)</option>
+                      <option value="weight">Price × Weight (kg)</option>
+                    </select>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-medium text-slate-400 mb-1.5 ml-1">
-                      Quantity
+                      Stock Quantity (Pieces)
                     </label>
                     <input
                       type="number"
                       required
-                      min="1"
+                      min="0"
+                      placeholder="Count for inventory"
                       value={purchaseForm.quantity}
                       onChange={e => setPurchaseForm({ ...purchaseForm, quantity: e.target.value })}
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none focus:border-violet-500"
                     />
                   </div>
-                  <div>
+
+                  {purchaseForm.calcMethod === 'weight' && (
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 ml-1">
+                        Total Weight (kg)
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        step="0.01"
+                        value={purchaseForm.weight}
+                        onChange={e => setPurchaseForm({ ...purchaseForm, weight: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none focus:border-violet-500"
+                      />
+                    </div>
+                  )}
+
+                  <div className={purchaseForm.calcMethod === 'quantity' ? 'col-span-1' : ''}>
                     <label className="block text-xs font-medium text-slate-400 mb-1.5 ml-1">
-                      Unit Price
+                      Unit Price (per {purchaseForm.calcMethod === 'weight' ? 'kg' : 'pc'})
                     </label>
                     <input
                       type="number"
@@ -681,17 +725,61 @@ export default function Transactions() {
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none focus:border-violet-500"
                     />
                   </div>
-                </div>
 
                 <div className="bg-slate-800 p-4 rounded-xl flex justify-between items-center">
                   <span className="text-slate-400 text-sm">Total Cost</span>
                   <span className="text-xl font-bold text-white font-mono">
-                    ₹
-                    {(
-                      (parseFloat(purchaseForm.quantity) || 0) *
-                      (parseFloat(purchaseForm.unitPrice) || 0)
+                    $
+                    {(purchaseForm.calcMethod === 'weight'
+                      ? (parseFloat(purchaseForm.weight) || 0) * (parseFloat(purchaseForm.unitPrice) || 0)
+                      : (parseFloat(purchaseForm.quantity) || 0) * (parseFloat(purchaseForm.unitPrice) || 0)
                     ).toFixed(2)}
                   </span>
+                </div>
+
+                {/* Payment Breakdown */}
+                <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 ml-1">
+                        Paid Amount
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={purchaseForm.initialPaidAmount}
+                        onChange={e => setPurchaseForm({ ...purchaseForm, initialPaidAmount: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none focus:border-violet-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-400 mb-1.5 ml-1">
+                        Payment Method
+                      </label>
+                      <select
+                        value={purchaseForm.paymentMethod}
+                        onChange={e => setPurchaseForm({ ...purchaseForm, paymentMethod: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none focus:border-violet-500"
+                      >
+                        <option value="CASH">Cash</option>
+                        <option value="UPI">UPI</option>
+                        <option value="BANK_TRANSFER">Bank Transfer</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center text-sm pt-2 border-t border-slate-700">
+                    <span className="text-slate-400">Balance to Ledger</span>
+                    <span className="font-bold text-amber-400 font-mono">
+                      ${Math.max(0, 
+                        (purchaseForm.calcMethod === 'weight'
+                          ? (parseFloat(purchaseForm.weight) || 0) * (parseFloat(purchaseForm.unitPrice) || 0)
+                          : (parseFloat(purchaseForm.quantity) || 0) * (parseFloat(purchaseForm.unitPrice) || 0))
+                        - (parseFloat(purchaseForm.initialPaidAmount) || 0)
+                      ).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -736,23 +824,40 @@ export default function Transactions() {
               </div>
 
               <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                <h3 className="text-xs font-bold text-slate-500 uppercase mb-2">Transaction Details</h3>
+                {(selectedRecord.quantity > 0 || selectedRecord.weight > 0) && (
+                  <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-slate-700/50">
+                    {selectedRecord.quantity > 0 && (
+                      <div>
+                        <p className="text-xs text-slate-500">Quantity</p>
+                        <p className="text-white font-medium">{selectedRecord.quantity} pcs</p>
+                      </div>
+                    )}
+                    {selectedRecord.weight > 0 && (
+                      <div>
+                        <p className="text-xs text-slate-500">Weight</p>
+                        <p className="text-white font-medium">{selectedRecord.weight} kg</p>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <h3 className="text-xs font-bold text-slate-500 uppercase mb-2">Financials</h3>
                 <div className="flex justify-between py-1 border-b border-slate-700/50">
                   <span className="text-slate-300">Total Amount</span>
                   <span className="font-mono text-white">
-                    ₹{selectedRecord.amount?.toLocaleString('en-IN')}
+                    ${selectedRecord.amount?.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-700/50">
                   <span className="text-slate-300">Paid Amount</span>
                   <span className="font-mono text-emerald-400">
-                    ₹{selectedRecord.paidAmount?.toLocaleString('en-IN')}
+                    ${selectedRecord.paidAmount?.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between py-1 pt-2">
                   <span className="text-slate-300">Balance</span>
                   <span className="font-mono text-rose-400 font-bold">
-                    ₹{selectedRecord.balance?.toLocaleString('en-IN')}
+                    ${selectedRecord.balance?.toLocaleString()}
                   </span>
                 </div>
               </div>

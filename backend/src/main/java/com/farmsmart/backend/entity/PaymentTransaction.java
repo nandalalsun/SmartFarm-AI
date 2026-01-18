@@ -16,7 +16,11 @@ public class PaymentTransaction {
 
     @ManyToOne
     @JsonBackReference
-    private Sale sale; // Nullable - allows payments without specific sale
+    private Sale sale; // Nullable
+
+    @ManyToOne
+    @JsonBackReference
+    private Purchase purchase; // Nullable
 
     @ManyToOne(optional = false)
     private Customer customer;

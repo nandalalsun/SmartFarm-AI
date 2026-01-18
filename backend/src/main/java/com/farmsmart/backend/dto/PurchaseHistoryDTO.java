@@ -12,5 +12,9 @@ public class PurchaseHistoryDTO {
     private String supplierName;
     private String productName;
     private Integer quantity;
+    private BigDecimal unitPrice;
+    private BigDecimal weight;
     private BigDecimal totalCost;
+    private BigDecimal initialPaidAmount;
+    private BigDecimal remainingBalance;
 }
