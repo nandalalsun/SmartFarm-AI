@@ -1,6 +1,7 @@
 package com.farmsmart.backend.entity;
 
 import com.farmsmart.backend.auth.entity.User;
+import com.farmsmart.backend.service.PaymentTransactionPaidAmount;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
@@ -11,7 +12,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
 @Data
-public class Purchase {
+public class Purchase implements PaymentTransactionPaidAmount {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;

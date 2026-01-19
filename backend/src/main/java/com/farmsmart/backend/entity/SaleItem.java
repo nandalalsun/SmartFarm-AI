@@ -22,6 +22,7 @@ public class SaleItem {
     private Product product;
 
     private Integer quantity;
+    private BigDecimal weight;
     
     // Price at moment of sale (snapshot)
     private BigDecimal unitPrice;

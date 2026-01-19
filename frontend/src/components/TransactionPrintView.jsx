@@ -18,18 +18,18 @@ const TransactionPrintView = React.forwardRef(({ data, filters, summary }, ref) 
     <div className="grid grid-cols-3 gap-4 mb-6">
       <div className="border border-gray-300 p-3 rounded">
         <p className="text-xs text-gray-600 font-semibold">Total Sales</p>
-        <p className="text-xl font-bold">₹{summary?.totalSales?.toLocaleString('en-IN') || 0}</p>
+        <p className="text-xl font-bold">${summary?.totalSales?.toLocaleString('en-US') || 0}</p>
       </div>
       <div className="border border-gray-300 p-3 rounded">
         <p className="text-xs text-gray-600 font-semibold">Total Purchases</p>
         <p className="text-xl font-bold text-amber-700">
-          ₹{summary?.totalPurchases?.toLocaleString('en-IN') || 0}
+          ${summary?.totalPurchases?.toLocaleString('en-US') || 0}
         </p>
       </div>
       <div className="border border-gray-300 p-3 rounded">
         <p className="text-xs text-gray-600 font-semibold">Net Outstanding</p>
         <p className={`text-xl font-bold ${summary?.netOutstanding >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-          {summary?.netOutstanding >= 0 ? '' : ''}₹{Math.abs(summary?.netOutstanding || 0).toLocaleString('en-IN')}
+          {summary?.netOutstanding >= 0 ? '' : ''}${Math.abs(summary?.netOutstanding || 0).toLocaleString('en-US')}
         </p>
         <p className="text-xs text-gray-500">
             {summary?.netOutstanding >= 0 ? 'Receivable' : 'Payable'}
@@ -64,13 +64,13 @@ const TransactionPrintView = React.forwardRef(({ data, filters, summary }, ref) 
               {row.customerPhone && row.customerPhone !== 'N/A' && <div className="text-xs text-gray-500">{row.customerPhone}</div>}
             </td>
             <td className="py-2 px-2 border-b border-gray-200 text-right font-mono">
-              ₹{row.amount?.toLocaleString('en-IN')}
+              ${row.amount?.toLocaleString('en-US')}
             </td>
             <td className="py-2 px-2 border-b border-gray-200 text-right font-mono text-green-700">
-              ₹{row.paidAmount?.toLocaleString('en-IN')}
+              ${row.paidAmount?.toLocaleString('en-US')}
             </td>
             <td className="py-2 px-2 border-b border-gray-200 text-right font-mono text-red-700">
-              ₹{row.balance?.toLocaleString('en-IN')}
+              ${row.balance?.toLocaleString('en-US')}
             </td>
             <td className="py-2 px-2 border-b border-gray-200 text-center text-xs">
               {row.status?.replace('_', ' ')}
@@ -81,9 +81,9 @@ const TransactionPrintView = React.forwardRef(({ data, filters, summary }, ref) 
       <tfoot>
         <tr className="border-t-2 border-gray-800 font-bold">
           <td colSpan="3" className="py-3 px-2 text-right">TOTALS:</td>
-          <td className="py-3 px-2 text-right font-mono">₹{summary?.totalAmountCol?.toLocaleString('en-IN')}</td>
-          <td className="py-3 px-2 text-right font-mono text-green-700">₹{summary?.totalPaidCol?.toLocaleString('en-IN')}</td>
-          <td className="py-3 px-2 text-right font-mono text-red-700">₹{summary?.totalBalanceCol?.toLocaleString('en-IN')}</td>
+          <td className="py-3 px-2 text-right font-mono">${summary?.totalAmountCol?.toLocaleString('en-US')}</td>
+          <td className="py-3 px-2 text-right font-mono text-green-700">${summary?.totalPaidCol?.toLocaleString('en-US')}</td>
+          <td className="py-3 px-2 text-right font-mono text-red-700">${summary?.totalBalanceCol?.toLocaleString('en-US')}</td>
           <td></td>
         </tr>
       </tfoot>

@@ -145,28 +145,28 @@ const Dashboard = () => {
             value={stats?.revenue?.value}
             change={stats?.revenue?.change}
             icon={DollarSign}
-            prefix="₹"
+            prefix="$"
           />
           <KPICard
             title="Net Profit"
             value={stats?.profit?.value}
             change={stats?.profit?.change}
             icon={Wallet}
-            prefix="₹"
+            prefix="$"
           />
           <KPICard
             title="Inventory Value"
             value={stats?.stockValue?.value}
             change={stats?.stockValue?.change}
             icon={Package}
-            prefix="₹"
+            prefix="$"
           />
           <KPICard
             title="Outstanding Credit"
             value={stats?.credits?.value}
             change={stats?.credits?.change}
             icon={CreditCard}
-            prefix="₹"
+            prefix="$"
           />
         </div>
 
@@ -293,7 +293,7 @@ const Dashboard = () => {
                       <div className="text-xs text-rose-400">Due: {item.due_date}</div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-mono">₹{item.current_balance}</span>
+                      <span className="font-mono">${item.current_balance}</span>
                       <button 
                         onClick={() => handleSettleClick(item)}
                         className="opacity-0 group-hover:opacity-100 bg-violet-600 hover:bg-violet-700 text-white text-xs px-2 py-1 rounded transition-all"

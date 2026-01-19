@@ -5,183 +5,264 @@ import com.farmsmart.backend.entity.*;
 import com.farmsmart.backend.exception.*;
 import com.farmsmart.backend.repository.*;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
+@RequiredArgsConstructor
+@AllArgsConstructor
 public class FinanceService {
 
-    @Autowired private CustomerRepository customerRepository;
-    @Autowired private ProductRepository productRepository;
-    @Autowired private SaleRepository saleRepository;
-    @Autowired private PurchaseRepository purchaseRepository;
-    @Autowired private CreditLedgerRepository creditLedgerRepository;
-    @Autowired private PaymentTransactionRepository paymentTransactionRepository;
+    private CustomerRepository customerRepository;
+    private ProductRepository productRepository;
+    private SaleRepository saleRepository;
+    private PurchaseRepository purchaseRepository;
+    private CreditLedgerRepository creditLedgerRepository;
+    private PaymentTransactionRepository paymentTransactionRepository;
+    private UnifiedTransactionMapper mapper;
 
     @Transactional
     public Sale createSale(SaleRequestDTO request) {
-        Customer customer = customerRepository.findById(request.getCustomerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+        Customer customer = loadCustomer(request.getCustomerId());
 
-        Sale sale = new Sale();
-        sale.setCustomer(customer);
-        sale.setSaleChannel(request.getSaleChannel());
-        sale.setItems(new ArrayList<>());
-        
-        BigDecimal totalBill = BigDecimal.ZERO;
+        Sale sale = initSale(customer, request);
+        BigDecimal totalBill = processSaleItems(sale, request.getItems());
 
-        // Process Items & Stock
-        for (SaleItemDTO itemDTO : request.getItems()) {
-            Product product = productRepository.findById(itemDTO.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
-
-            if (product.getCurrentStock() < itemDTO.getQuantity()) {
-                throw new InsufficientStockException("Not enough stock for " + product.getName());
-            }
-
-            // Decrement Stock
-            product.setCurrentStock(product.getCurrentStock() - itemDTO.getQuantity());
-            productRepository.save(product);
-
-            SaleItem item = new SaleItem();
-            item.setSale(sale);
-            item.setProduct(product);
-            item.setQuantity(itemDTO.getQuantity());
-            item.setUnitPrice(itemDTO.getUnitPrice());
-            item.setLineTotal(itemDTO.getUnitPrice().multiply(BigDecimal.valueOf(itemDTO.getQuantity())));
-            
-            sale.getItems().add(item);
-            totalBill = totalBill.add(item.getLineTotal());
-        }
-
-        sale.setTotalBillAmount(totalBill);
-        sale.setInitialPaidAmount(request.getInitialPaidAmount());
-        
-        BigDecimal remaining = totalBill.subtract(request.getInitialPaidAmount());
-        if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO; // No negative balance
-        sale.setRemainingBalance(remaining);
-
-        // Credit Validation
-        if (remaining.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal newTotalDebt = customer.getCurrentTotalBalance().add(remaining);
-            if (customer.getCreditLimit() != null && newTotalDebt.compareTo(customer.getCreditLimit()) > 0) {
-                throw new CreditLimitExceededException("Credit limit exceeded for customer. Limit: " + customer.getCreditLimit() + ", Current Balance: " + customer.getCurrentTotalBalance());
-            }
-            // Update Customer Balance
-            customer.setCurrentTotalBalance(newTotalDebt);
-            customerRepository.save(customer);
-            
-            sale.setPaymentStatus("PARTIAL");
-        } else {
-            sale.setPaymentStatus("FULLY_PAID");
-        }
-        
-        if (remaining.compareTo(totalBill) == 0) {
-            sale.setPaymentStatus("UNPAID");
-        }
+        applyPaymentAndCredit(sale, customer, request, totalBill);
 
         Sale savedSale = saleRepository.save(sale);
 
-        // Record Initial Transaction (if any)
-        if (request.getInitialPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
-            PaymentTransaction txn = new PaymentTransaction();
-            txn.setSale(savedSale);
-            txn.setCustomer(customer);
-            txn.setAmountPaid(request.getInitialPaidAmount());
-            txn.setPaymentMethod(request.getPaymentMethod());
-            // txn repository not created yet, usually cascaded or separate
-        }
-
-        // Create Ledger Entry if needed
-        if (remaining.compareTo(BigDecimal.ZERO) > 0) {
-            CreditLedger ledger = new CreditLedger();
-            ledger.setCustomer(customer);
-            ledger.setSale(savedSale);
-            ledger.setOriginalDebt(remaining);
-            ledger.setCurrentBalance(remaining);
-            ledger.setStatus("ACTIVE");
-            ledger.setDueDate(LocalDate.now().plusDays(30)); // Default 30 days credit
-            creditLedgerRepository.save(ledger);
-        }
+        recordInitialPayment(savedSale, customer, request);
+        createCreditLedgerIfNeeded(savedSale, customer);
 
         return savedSale;
     }
 
-    
-    @Transactional
-    public Purchase createPurchase(PurchaseDTO request) {
-        Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+    private Customer loadCustomer(UUID customerId) {
+        return customerRepository.findById(customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+    }
 
-        // Increment Stock (Count based as per user request)
-        if (request.getQuantity() != null) {
-            product.setCurrentStock(product.getCurrentStock() + request.getQuantity());
-            productRepository.save(product);
+    private Sale initSale(Customer customer, SaleRequestDTO request) {
+        Sale sale = new Sale();
+        sale.setCustomer(customer);
+        sale.setSaleChannel(request.getSaleChannel());
+        sale.setItems(new ArrayList<>());
+        return sale;
+    }
+
+    private BigDecimal processSaleItems(Sale sale, List<SaleItemDTO> items) {
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (SaleItemDTO dto : items) {
+            Product product = loadProduct(dto.getProductId());
+            validateAndReduceStock(product, dto.getQuantity());
+
+            SaleItem item = buildSaleItem(sale, product, dto);
+            sale.getItems().add(item);
+
+            total = total.add(item.getLineTotal());
+        }
+        sale.setTotalBillAmount(total);
+        return total;
+    }
+
+    private Product loadProduct(UUID productId) {
+        return productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+    }
+
+    private void validateAndReduceStock(Product product, int quantity) {
+        if (product.getCurrentStock() < quantity) {
+            throw new InsufficientStockException("Not enough stock for " + product.getName());
+        }
+        product.setCurrentStock(product.getCurrentStock() - quantity);
+        productRepository.save(product);
+    }
+
+    private SaleItem buildSaleItem(Sale sale, Product product, SaleItemDTO dto) {
+        SaleItem item = new SaleItem();
+        item.setSale(sale);
+        item.setProduct(product);
+        item.setQuantity(dto.getQuantity());
+        item.setWeight(dto.getWeight());
+        item.setUnitPrice(dto.getUnitPrice());
+        item.setLineTotal(calculateLineTotal(dto));
+        return item;
+    }
+
+    private BigDecimal calculateLineTotal(SaleItemDTO dto) {
+        return Optional.ofNullable(dto.getWeight())
+                .filter(w -> w.compareTo(BigDecimal.ZERO) > 0)
+                .map(w -> dto.getUnitPrice().multiply(w))
+                .orElse(dto.getUnitPrice().multiply(BigDecimal.valueOf(dto.getQuantity())));
+    }
+
+    private void applyPaymentAndCredit(Sale sale, Customer customer,
+                                       SaleRequestDTO request, BigDecimal total) {
+
+        sale.setInitialPaidAmount(request.getInitialPaidAmount());
+
+        BigDecimal remaining = total.subtract(request.getInitialPaidAmount());
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
+
+        sale.setRemainingBalance(remaining);
+
+        if (remaining.compareTo(BigDecimal.ZERO) == 0) {
+            sale.setPaymentStatus("FULLY_PAID");
+            return;
         }
 
+        validateCreditLimit(customer, remaining);
+        customer.setCurrentTotalBalance(customer.getCurrentTotalBalance().add(remaining));
+        customerRepository.save(customer);
+
+        sale.setPaymentStatus(
+                remaining.compareTo(total) == 0 ? "UNPAID" : "PARTIAL"
+        );
+    }
+
+    private void validateCreditLimit(Customer customer, BigDecimal remaining) {
+        if (customer.getCreditLimit() == null) return;
+
+        BigDecimal newDebt = customer.getCurrentTotalBalance().add(remaining);
+        if (newDebt.compareTo(customer.getCreditLimit()) > 0) {
+            throw new CreditLimitExceededException("Credit limit exceeded");
+        }
+    }
+
+    private void recordInitialPayment(Sale sale, Customer customer, SaleRequestDTO request) {
+        if (request.getInitialPaidAmount().compareTo(BigDecimal.ZERO) <= 0) return;
+
+        PaymentTransaction txn = new PaymentTransaction();
+        txn.setSale(sale);
+        txn.setCustomer(customer);
+        txn.setAmountPaid(request.getInitialPaidAmount());
+        txn.setPaymentMethod(request.getPaymentMethod());
+    }
+
+    private void createCreditLedgerIfNeeded(Sale sale, Customer customer) {
+        if (sale.getRemainingBalance().compareTo(BigDecimal.ZERO) <= 0) return;
+
+        CreditLedger ledger = new CreditLedger();
+        ledger.setCustomer(customer);
+        ledger.setSale(sale);
+        ledger.setOriginalDebt(sale.getRemainingBalance());
+        ledger.setCurrentBalance(sale.getRemainingBalance());
+        ledger.setStatus("ACTIVE");
+        ledger.setDueDate(LocalDate.now().plusDays(30));
+        creditLedgerRepository.save(ledger);
+    }
+
+
+
+    // CREATE PURCHASE
+    @Transactional
+    public Purchase createPurchase(PurchaseDTO request) {
+        Product product = loadProduct(request.getProductId());
+        updateStock(product, request.getQuantity());
+
+        Purchase purchase = buildPurchase(product, request);
+        applyPurchasePayment(purchase, request);
+
+        handleFarmerPurchaseIfAny(purchase, request);
+
+        Purchase savedPurchase = purchaseRepository.save(purchase);
+        recordPurchasePayment(savedPurchase, request);
+
+        return savedPurchase;
+    }
+
+    private void updateStock(Product product, Integer quantity) {
+        if (quantity == null) return;
+        product.setCurrentStock(product.getCurrentStock() + quantity);
+        productRepository.save(product);
+    }
+
+    private Purchase buildPurchase(Product product, PurchaseDTO request) {
         Purchase purchase = new Purchase();
         purchase.setProduct(product);
         purchase.setQuantity(request.getQuantity());
         purchase.setUnitPrice(request.getUnitPrice());
         purchase.setWeight(request.getWeight());
         purchase.setTotalCost(request.getTotalCost());
-        purchase.setInitialPaidAmount(request.getInitialPaidAmount() != null ? request.getInitialPaidAmount() : BigDecimal.ZERO);
-        
-        BigDecimal remaining = request.getTotalCost().subtract(purchase.getInitialPaidAmount());
-        if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
-        purchase.setRemainingBalance(remaining);
-
-        if (request.getCustomerId() != null) {
-            Customer customer = customerRepository.findById(request.getCustomerId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
-            
-            if (!"FARMER".equals(customer.getCustomerType())) {
-                throw new IllegalArgumentException("Only FARMER customers can be linked to purchases");
-            }
-
-            purchase.setCustomer(customer);
-
-            // Record Ledger Entry for the REMAINING balance
-            if (remaining.compareTo(BigDecimal.ZERO) > 0) {
-                CreditLedger ledger = new CreditLedger();
-                ledger.setCustomer(customer);
-                ledger.setPurchase(purchase);
-                ledger.setOriginalDebt(remaining.negate()); // Negative debt = Credit
-                ledger.setCurrentBalance(remaining.negate());
-                ledger.setStatus("CREDIT");
-                ledger.setDueDate(LocalDate.now());
-                creditLedgerRepository.save(ledger);
-
-                // Update Customer Balance (Subtract REMAINING cost from balance)
-                customer.setCurrentTotalBalance(customer.getCurrentTotalBalance().subtract(remaining));
-                customerRepository.save(customer);
-            }
-        } else {
-            purchase.setSupplierName(request.getSupplierName());
-        }
-
-        Purchase savedPurchase = purchaseRepository.save(purchase);
-
-        // Record Initial Payment Transaction if any
-        if (purchase.getInitialPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
-            PaymentTransaction txn = new PaymentTransaction();
-            txn.setPurchase(savedPurchase);
-            if (savedPurchase.getCustomer() != null) {
-                txn.setCustomer(savedPurchase.getCustomer());
-            }
-            txn.setAmountPaid(purchase.getInitialPaidAmount());
-            txn.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "CASH");
-            paymentTransactionRepository.save(txn);
-        }
-
-        return savedPurchase;
+        purchase.setInitialPaidAmount(
+                request.getInitialPaidAmount() != null ? request.getInitialPaidAmount() : BigDecimal.ZERO
+        );
+        return purchase;
     }
+
+    private void applyPurchasePayment(Purchase purchase, PurchaseDTO request) {
+        BigDecimal remaining = request.getTotalCost()
+                .subtract(purchase.getInitialPaidAmount());
+
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+            remaining = BigDecimal.ZERO;
+        }
+        purchase.setRemainingBalance(remaining);
+    }
+
+    private void handleFarmerPurchaseIfAny(Purchase purchase, PurchaseDTO request) {
+        if (request.getCustomerId() == null) {
+            purchase.setSupplierName(request.getSupplierName());
+            return;
+        }
+
+        Customer farmer = loadFarmer(request.getCustomerId());
+        purchase.setCustomer(farmer);
+
+        if (purchase.getRemainingBalance().compareTo(BigDecimal.ZERO) > 0) {
+            createFarmerCreditLedger(farmer, purchase);
+            updateFarmerBalance(farmer, purchase.getRemainingBalance());
+        }
+    }
+
+    private Customer loadFarmer(UUID customerId) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+
+        if (!"FARMER".equals(customer.getCustomerType())) {
+            throw new IllegalArgumentException("Only FARMER customers can be linked to purchases");
+        }
+        return customer;
+    }
+
+    private void createFarmerCreditLedger(Customer farmer, Purchase purchase) {
+        CreditLedger ledger = new CreditLedger();
+        ledger.setCustomer(farmer);
+        ledger.setPurchase(purchase);
+        ledger.setOriginalDebt(purchase.getRemainingBalance().negate());
+        ledger.setCurrentBalance(purchase.getRemainingBalance().negate());
+        ledger.setStatus("CREDIT");
+        ledger.setDueDate(LocalDate.now());
+        creditLedgerRepository.save(ledger);
+    }
+
+    private void updateFarmerBalance(Customer farmer, BigDecimal remaining) {
+        farmer.setCurrentTotalBalance(
+                farmer.getCurrentTotalBalance().subtract(remaining)
+        );
+        customerRepository.save(farmer);
+    }
+
+    private void recordPurchasePayment(Purchase purchase, PurchaseDTO request) {
+        if (purchase.getInitialPaidAmount().compareTo(BigDecimal.ZERO) <= 0) return;
+
+        PaymentTransaction txn = new PaymentTransaction();
+        txn.setPurchase(purchase);
+        txn.setCustomer(purchase.getCustomer());
+        txn.setAmountPaid(purchase.getInitialPaidAmount());
+        txn.setPaymentMethod(
+                request.getPaymentMethod() != null ? request.getPaymentMethod() : "CASH"
+        );
+        paymentTransactionRepository.save(txn);
+    }
+
 
     public Map<String, Object> getFarmerProfit(java.util.UUID customerId) {
         // Simple calculation: Total Delivery Value - Total Input Debt
@@ -301,129 +382,21 @@ public class FinanceService {
     }
 
     public List<UnifiedTransactionDTO> getUnifiedTransactions(TransactionFilterDTO filter) {
-        List<UnifiedTransactionDTO> unifiedList = new ArrayList<>();
-        
-        // 1. Fetch Sales
-        List<Sale> sales = saleRepository.findAll(com.farmsmart.backend.repository.SaleSpecification.filterBy(filter));
-        
-        for (Sale sale : sales) {
-            UnifiedTransactionDTO dto = new UnifiedTransactionDTO();
-            dto.setId(sale.getId());
-            dto.setDate(sale.getCreatedAt());
-            dto.setType("SALE");
-            dto.setCustomerName(sale.getCustomer().getName());
-            dto.setCustomerPhone(sale.getCustomer().getPhone());
-            dto.setAmount(sale.getTotalBillAmount());
-            
-            BigDecimal totalPaid = sale.getPaymentTransactions() != null ? 
-                sale.getPaymentTransactions().stream()
-                    .map(PaymentTransaction::getAmountPaid)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add) 
-                : BigDecimal.ZERO;
-            
-            if (totalPaid.compareTo(BigDecimal.ZERO) == 0 && sale.getInitialPaidAmount() != null) {
-                totalPaid = sale.getInitialPaidAmount();
-            }
-            
-            dto.setPaidAmount(totalPaid);
-            
-            BigDecimal balance = sale.getRemainingBalance();
-            if (balance == null) {
-                balance = sale.getTotalBillAmount().subtract(totalPaid);
-            }
-            dto.setBalance(balance);
-            dto.setStatus(sale.getPaymentStatus());
-            unifiedList.add(dto);
-        }
+        List<UnifiedTransactionDTO> result = new ArrayList<>();
 
-        // 2. Fetch Purchases (Logic: If we are not filtering for SALES only)
-        // For now, assume we fetch all matches and filter by type in frontend or backend if needed.
-        // We'll fetch purchases if filter allows.
-        
-        List<Purchase> purchases = purchaseRepository.findAll(PurchaseSpecification.filterBy(filter));
-        
-        for (Purchase purchase : purchases) {
-            UnifiedTransactionDTO dto = new UnifiedTransactionDTO();
-            dto.setId(purchase.getId());
-            dto.setDate(purchase.getPurchaseDate());
-            dto.setType("PURCHASE");
-            
-            if (purchase.getCustomer() != null) {
-                dto.setCustomerName(purchase.getCustomer().getName());
-                dto.setCustomerPhone(purchase.getCustomer().getPhone());
-            } else {
-                dto.setCustomerName(purchase.getSupplierName() != null ? purchase.getSupplierName() : "Unknown Supplier");
-                dto.setCustomerPhone("N/A");
-            }
-            
-            dto.setAmount(purchase.getTotalCost());
-            
-            BigDecimal totalPaid = purchase.getPaymentTransactions() != null ? 
-                purchase.getPaymentTransactions().stream()
-                    .map(PaymentTransaction::getAmountPaid)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add) 
-                : BigDecimal.ZERO;
-            
-            if (totalPaid.compareTo(BigDecimal.ZERO) == 0 && purchase.getInitialPaidAmount() != null) {
-                totalPaid = purchase.getInitialPaidAmount();
-            }
+        saleRepository.findAll(SaleSpecification.filterBy(filter))
+                .forEach(s -> result.add(mapper.fromSale(s)));
 
-            dto.setPaidAmount(totalPaid);
-            
-            BigDecimal balance = purchase.getRemainingBalance();
-            if (balance == null) {
-                balance = purchase.getTotalCost().subtract(totalPaid);
-            }
-            dto.setBalance(balance);
-            
-            if (balance.compareTo(BigDecimal.ZERO) == 0) {
-                dto.setStatus("COMPLETED");
-            } else if (balance.compareTo(purchase.getTotalCost()) == 0) {
-                dto.setStatus("UNPAID");
-            } else {
-                dto.setStatus("PARTIAL");
-            }
+        purchaseRepository.findAll(PurchaseSpecification.filterBy(filter))
+                .forEach(p -> result.add(mapper.fromPurchase(p)));
 
-            dto.setQuantity(purchase.getQuantity());
-            dto.setWeight(purchase.getWeight());
-            unifiedList.add(dto);
-        }
+        paymentTransactionRepository
+                .findAll(PaymentTransactionSpecification.filterBy(filter))
+                .forEach(t -> result.add(mapper.fromSettlement(t)));
 
-        // 3. Fetch General Settlements (not linked to Sale or Purchase)
-        List<PaymentTransaction> settlements = paymentTransactionRepository.findAll(PaymentTransactionSpecification.filterBy(filter));
-        
-        for (PaymentTransaction settlement : settlements) {
-            UnifiedTransactionDTO dto = new UnifiedTransactionDTO();
-            dto.setId(settlement.getId());
-            dto.setDate(settlement.getPaymentDate());
-            dto.setType("SETTLEMENT");
-            dto.setCustomerName(settlement.getCustomer().getName());
-            dto.setCustomerPhone(settlement.getCustomer().getPhone());
-            
-            dto.setAmount(settlement.getAmountPaid());
-            dto.setPaidAmount(settlement.getAmountPaid());
-            
-            // Balance impact based on Transaction Type
-            BigDecimal impact;
-            if ("PAYOUT".equalsIgnoreCase(settlement.getTransactionType())) {
-                impact = settlement.getAmountPaid(); // Payout reduces our debt (Positive impact)
-            } else {
-                impact = settlement.getAmountPaid().negate(); // Receipt reduces customer debt (Negative impact)
-            }
-            
-            dto.setBalance(impact);
-            dto.setStatus("SETTLED");
-            dto.setTransactionCategory(settlement.getTransactionType());
-            
-            unifiedList.add(dto);
-        }
+        result.sort(Comparator.comparing(UnifiedTransactionDTO::getDate,
+                Comparator.nullsLast(Comparator.reverseOrder())));
 
-        // 4. Sort by Date Descending
-        unifiedList.sort((a, b) -> {
-            if (a.getDate() == null || b.getDate() == null) return 0;
-            return b.getDate().compareTo(a.getDate());
-        });
-        
-        return unifiedList;
+        return result;
     }
 }
