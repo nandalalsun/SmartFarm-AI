@@ -6,7 +6,6 @@ import com.farmsmart.backend.exception.*;
 import com.farmsmart.backend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -14,7 +13,6 @@ import java.time.LocalDate;
 import java.util.*;
 
 @Service
-@RequiredArgsConstructor
 @AllArgsConstructor
 public class FinanceService {
 
