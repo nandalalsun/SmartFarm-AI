@@ -32,6 +32,8 @@ public class PaymentTransaction {
     
     private String remarks; // Optional notes about the payment
     
+    private String transactionType; // RECEIPT or PAYOUT
+    
     private LocalDateTime paymentDate;
 
     @PrePersist

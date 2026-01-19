@@ -18,4 +18,5 @@ public class UnifiedTransactionDTO {
     private String status;
     private Integer quantity;
     private BigDecimal weight;
+    private String transactionCategory; // For Settlement: RECEIPT/PAYOUT, For Purchase/Sale: null
 }

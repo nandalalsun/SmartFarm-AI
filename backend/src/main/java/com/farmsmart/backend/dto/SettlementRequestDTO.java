@@ -21,4 +21,7 @@ public class SettlementRequestDTO {
     
     private String notes;
     private LocalDateTime transactionDate;
+    
+    @NotNull(message = "Transaction type is required")
+    private String transactionType; // RECEIPT or PAYOUT
 }

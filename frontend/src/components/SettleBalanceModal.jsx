@@ -4,39 +4,23 @@ import { X, CreditCard, Banknote, Landmark, Check, AlertCircle, Info } from 'luc
 
 const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
   const [amount, setAmount] = useState('');
+  const [transactionType, setTransactionType] = useState(customer.currentTotalBalance < 0 ? 'PAYOUT' : 'RECEIPT');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [remarks, setRemarks] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Unpaid Sales logic removed for Running Balance approach
-
   const calculatePreview = () => {
-    // Only calculate balance impact
     const payAmount = parseFloat(amount) || 0;
+    const currentBalance = customer.currentTotalBalance || 0;
     
-    // Logic: Payment reduces balance. 
-    // If balance is negative (Payable), this might be a Payout?
-    // User interface logic: "Settle Balance" usually means updating specific debt.
-    // For Running Balance:
-    // New Balance = Current Balance - Payment Amount.
-    // (Assuming User ALWAYS enters amount as positive 'payment')
-    
-    // Example 1: Owe 1000. Pay 600. New = 400.
-    // Example 2: Owe -500 (Farmer Owes Us? OR We Owe Farmer?).
-    // In this app: Positive = Customer Debt (Receivable). Negative = We Owe (Payable).
-    // If We Owe -500. We Pay 300 (Payout). 
-    // Logic: -500 + 300 = -200? Or -500 is "Credit". 
-    // If we Pay, we are giving money. That means we owe less.
-    // So -500 -> -200 (Closer to zero).
-    // So if balance < 0, we ADD amount.
-    // If balance > 0, we SUBTRACT amount.
-    
-    let newBalance = 0;
-    if (customer.currentTotalBalance < 0) {
-        newBalance = customer.currentTotalBalance + payAmount;
+    // PAYOUT (We pay them): Increases balance (moves toward positive).
+    // RECEIPT (They pay us): Decreases balance (moves toward negative).
+    let newBalance = currentBalance;
+    if (transactionType === 'PAYOUT') {
+        newBalance = currentBalance + payAmount;
     } else {
-        newBalance = customer.currentTotalBalance - payAmount;
+        newBalance = currentBalance - payAmount;
     }
 
     return { newBalance };
@@ -52,7 +36,8 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
         customerId: customer.id,
         amount: parseFloat(amount),
         paymentMethod,
-        notes: remarks || 'Balance Settlement'
+        transactionType,
+        notes: remarks || `Balance Settlement (${transactionType})`
       };
 
       await api.post('/finance/settlements', payload);
@@ -122,13 +107,46 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
             )}
           </div>
 
+          {/* Transaction Type Toggle */}
+          <div className="bg-slate-800/30 p-1 rounded-xl border border-slate-700 flex">
+            <button
+              type="button"
+              onClick={() => setTransactionType('RECEIPT')}
+              className={`flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                transactionType === 'RECEIPT'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Banknote className="w-4 h-4" />
+              Money Received
+            </button>
+            <button
+              type="button"
+              onClick={() => setTransactionType('PAYOUT')}
+              className={`flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                transactionType === 'PAYOUT'
+                  ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/20'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Landmark className="w-4 h-4" />
+              Money Paid
+            </button>
+          </div>
+          
+          <div className="px-1 text-[10px] text-slate-500 flex justify-between uppercase tracking-wider font-bold">
+            <span>{transactionType === 'RECEIPT' ? '← Increases your cash (Reduces customer debt)' : ''}</span>
+            <span>{transactionType === 'PAYOUT' ? '→ Spending cash (Reduces your debt to them)' : ''}</span>
+          </div>
+
           {/* Form */}
           <form id="settle-form" onSubmit={handleSubmit} className="space-y-6">
             
             {/* Amount Input */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Payment Amount <span className="text-rose-500">*</span>
+                {transactionType === 'RECEIPT' ? 'Amount Received' : 'Amount Paid'} <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-lg">$</span>
@@ -141,7 +159,9 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
                   // Max validation removed as we might want to overpay (Credit)
                   step="0.01"
                   required
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white text-lg placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all font-mono"
+                  className={`w-full bg-slate-800 border-2 rounded-xl pl-10 pr-4 py-3 text-white text-lg placeholder-slate-600 focus:outline-none transition-all font-mono ${
+                    transactionType === 'RECEIPT' ? 'border-slate-700 focus:border-emerald-500' : 'border-slate-700 focus:border-amber-500'
+                  }`}
                 />
               </div>
               

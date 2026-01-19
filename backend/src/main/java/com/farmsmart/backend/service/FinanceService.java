@@ -389,7 +389,36 @@ public class FinanceService {
             unifiedList.add(dto);
         }
 
-        // 3. Sort by Date Descending
+        // 3. Fetch General Settlements (not linked to Sale or Purchase)
+        List<PaymentTransaction> settlements = paymentTransactionRepository.findAll(PaymentTransactionSpecification.filterBy(filter));
+        
+        for (PaymentTransaction settlement : settlements) {
+            UnifiedTransactionDTO dto = new UnifiedTransactionDTO();
+            dto.setId(settlement.getId());
+            dto.setDate(settlement.getPaymentDate());
+            dto.setType("SETTLEMENT");
+            dto.setCustomerName(settlement.getCustomer().getName());
+            dto.setCustomerPhone(settlement.getCustomer().getPhone());
+            
+            dto.setAmount(settlement.getAmountPaid());
+            dto.setPaidAmount(settlement.getAmountPaid());
+            
+            // Balance impact based on Transaction Type
+            BigDecimal impact;
+            if ("PAYOUT".equalsIgnoreCase(settlement.getTransactionType())) {
+                impact = settlement.getAmountPaid(); // Payout reduces our debt (Positive impact)
+            } else {
+                impact = settlement.getAmountPaid().negate(); // Receipt reduces customer debt (Negative impact)
+            }
+            
+            dto.setBalance(impact);
+            dto.setStatus("SETTLED");
+            dto.setTransactionCategory(settlement.getTransactionType());
+            
+            unifiedList.add(dto);
+        }
+
+        // 4. Sort by Date Descending
         unifiedList.sort((a, b) -> {
             if (a.getDate() == null || b.getDate() == null) return 0;
             return b.getDate().compareTo(a.getDate());

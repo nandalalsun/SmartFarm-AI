@@ -31,55 +31,60 @@ public class PaymentSettlementService {
     @Transactional
     public PaymentTransaction processSettlement(SettlementRequestDTO request) {
         // 1. Validate Customer
+        @SuppressWarnings("null")
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
         // 2. Create Payment Transaction (General Payment, no Sale ID)
         PaymentTransaction txn = new PaymentTransaction();
-        txn.setCustomer(customer);
-        txn.setAmountPaid(request.getAmount());
-        txn.setPaymentMethod(request.getPaymentMethod());
-        txn.setRemarks(request.getNotes());
-        if (request.getTransactionDate() != null) {
-            txn.setPaymentDate(request.getTransactionDate());
-        }
-        
-        // 3. Update Customer Balance (Running Balance Approach)
-        // Logic: 
-        // If balance > 0 (They owe US): Payment reduces balance (Subtract).
-        // If balance < 0 (WE owe THEM): We pay them, moves balance toward zero (Add).
-        
-        BigDecimal currentBalance = customer.getCurrentTotalBalance();
-        if (currentBalance == null) currentBalance = BigDecimal.ZERO;
+    txn.setCustomer(customer);
+    txn.setAmountPaid(request.getAmount());
+    txn.setPaymentMethod(request.getPaymentMethod());
+    txn.setRemarks(request.getNotes());
+    txn.setTransactionType(request.getTransactionType());
+    if (request.getTransactionDate() != null) {
+        txn.setPaymentDate(request.getTransactionDate());
+    }
+    
+    // 3. Update Customer Balance
+    // Logic: 
+    // PAYOUT (We pay them): Increases balance (moves toward positive/receivable).
+    // RECEIPT (They pay us): Decreases balance (moves toward negative/payable).
+    
+    BigDecimal currentBalance = customer.getCurrentTotalBalance();
+    if (currentBalance == null) currentBalance = BigDecimal.ZERO;
 
-        if (currentBalance.compareTo(BigDecimal.ZERO) < 0) {
-            // We owe them. Payment to them (Payout) should increase balance toward 0.
-            customer.setCurrentTotalBalance(currentBalance.add(request.getAmount()));
-        } else {
-            // They owe us. Payment from them should decrease balance toward 0.
-            customer.setCurrentTotalBalance(currentBalance.subtract(request.getAmount()));
-        }
-        
-        customerRepository.save(customer);
-        
-        PaymentTransaction savedTxn = paymentTransactionRepository.save(txn);
+    BigDecimal newBalance;
+    BigDecimal ledgerAmount;
 
-        // 4. Create Ledger Entry
-        CreditLedger ledger = new CreditLedger();
-        ledger.setCustomer(customer);
-        ledger.setPaymentTransaction(savedTxn); // Link to txn
-        
-        // Ledger Debt: -Amount (Credit)
-        ledger.setOriginalDebt(request.getAmount().negate()); 
-        ledger.setCurrentBalance(request.getAmount().negate()); 
-        
-        ledger.setStatus("PAYMENT"); 
-        ledger.setRemarks("Balance Settlement via " + request.getPaymentMethod());
-        ledger.setDueDate(java.time.LocalDate.now());
-        
-        creditLedgerRepository.save(ledger);
+    if ("PAYOUT".equalsIgnoreCase(request.getTransactionType())) {
+        newBalance = currentBalance.add(request.getAmount());
+        ledgerAmount = request.getAmount(); // Positive impact
+    } else { // Assuming "RECEIPT" or other types default to receipt behavior
+        newBalance = currentBalance.subtract(request.getAmount());
+        ledgerAmount = request.getAmount().negate(); // Negative impact
+    }
+    
+    customer.setCurrentTotalBalance(newBalance);
+    customerRepository.save(customer);
+    
+    PaymentTransaction savedTxn = paymentTransactionRepository.save(txn);
 
-        return savedTxn;
+    // 4. Create Ledger Entry
+    CreditLedger ledger = new CreditLedger();
+    ledger.setCustomer(customer);
+    ledger.setPaymentTransaction(savedTxn);
+    
+    ledger.setOriginalDebt(ledgerAmount); 
+    ledger.setCurrentBalance(ledgerAmount); 
+    
+    ledger.setStatus("PAYMENT"); 
+    ledger.setRemarks("Balance Settlement (" + request.getTransactionType() + ") via " + request.getPaymentMethod());
+    ledger.setDueDate(java.time.LocalDate.now());
+    
+    creditLedgerRepository.save(ledger);
+
+    return savedTxn;
     }
 
     public List<UnpaidSaleDTO> getUnpaidSalesForCustomer(UUID customerId) {
