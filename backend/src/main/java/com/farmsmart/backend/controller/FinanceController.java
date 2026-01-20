@@ -1,9 +1,11 @@
 package com.farmsmart.backend.controller;
 
-import com.farmsmart.backend.dto.TransactionFilterDTO;
-import com.farmsmart.backend.dto.TransactionReportDTO;
+import com.farmsmart.backend.dto.*;
+import com.farmsmart.backend.entity.PaymentTransaction;
 import com.farmsmart.backend.service.FinanceService;
+import com.farmsmart.backend.service.PaymentSettlementService;
 import com.farmsmart.backend.service.ReportService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -20,18 +23,18 @@ public class FinanceController {
 
     @Autowired private FinanceService financeService;
     @Autowired private ReportService reportService;
-    @Autowired private com.farmsmart.backend.service.PaymentSettlementService paymentSettlementService;
+    @Autowired private PaymentSettlementService paymentSettlementService;
 
     @PostMapping("/settlements")
     @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'ACCOUNTANT')")
-    public ResponseEntity<com.farmsmart.backend.entity.PaymentTransaction> createSettlement(
-            @RequestBody @jakarta.validation.Valid com.farmsmart.backend.dto.SettlementRequestDTO request) {
+    public ResponseEntity<PaymentTransaction> createSettlement(
+            @RequestBody @Valid SettlementRequestDTO request) {
         return ResponseEntity.ok(paymentSettlementService.processSettlement(request));
     }
 
     @GetMapping("/customers/{customerId}/unpaid-sales")
     @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'ACCOUNTANT', 'CASHIER')")
-    public ResponseEntity<java.util.List<com.farmsmart.backend.dto.UnpaidSaleDTO>> getUnpaidSales(
+    public ResponseEntity<List<UnpaidSaleDTO>> getUnpaidSales(
             @PathVariable UUID customerId) {
         return ResponseEntity.ok(paymentSettlementService.getUnpaidSalesForCustomer(customerId));
     }
@@ -49,31 +52,33 @@ public class FinanceController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
             @RequestParam(required = false) String paymentStatus) {
-        
-        TransactionFilterDTO filter = new TransactionFilterDTO();
-        filter.setCustomerId(customerId);
-        filter.setFromDate(fromDate);
-        filter.setToDate(toDate);
-        filter.setPaymentStatus(paymentStatus);
+        return ResponseEntity.ok(reportService.generateTransactionReport(
+                TransactionFilterDTO.builder()
+                        .customerId(customerId)
+                        .fromDate(fromDate)
+                        .toDate(toDate)
+                        .paymentStatus(paymentStatus)
+                        .build()
+                )
+        );
 
-
-        return ResponseEntity.ok(reportService.generateTransactionReport(filter));
     }
 
     @GetMapping("/ledger")
     @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'ACCOUNTANT')")
-    public ResponseEntity<java.util.List<com.farmsmart.backend.dto.UnifiedTransactionDTO>> getLedger(
+    public ResponseEntity<List<UnifiedTransactionDTO>> getLedger(
             @RequestParam(required = false) UUID customerId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
             @RequestParam(required = false) String paymentStatus) {
-        
-        TransactionFilterDTO filter = new TransactionFilterDTO();
-        filter.setCustomerId(customerId);
-        filter.setFromDate(fromDate);
-        filter.setToDate(toDate);
-        filter.setPaymentStatus(paymentStatus);
 
-        return ResponseEntity.ok(financeService.getUnifiedTransactions(filter));
+        return ResponseEntity.ok(financeService.getUnifiedTransactions(
+                TransactionFilterDTO.builder()
+                .customerId(customerId)
+                .fromDate(fromDate)
+                .toDate(toDate)
+                .paymentStatus(paymentStatus)
+                .build())
+        );
     }
 }

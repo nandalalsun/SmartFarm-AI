@@ -114,28 +114,33 @@ components:
         customerId:
           type: string
           format: uuid
+        initialPaidAmount:
+          type: number
+          format: decimal
+        paymentMethod:
+          type: string
+          enum: [CASH, CHECK, TRANSFER, ESEWA, CARD]
+        saleChannel:
+          type: string
+          enum: [POS, WHATSAPP, FIELD]
         items:
           type: array
           items:
             type: object
+            required:
+              - productId
             properties:
               productId:
                 type: string
                 format: uuid
               quantity:
                 type: integer
+              weight:
+                type: number
+                format: decimal
               unitPrice:
                 type: number
                 format: decimal
-        payment:
-          type: object
-          properties:
-            amount:
-              type: number
-              format: decimal
-            method:
-              type: string
-              enum: [CASH, CHECK, TRANSFER]
 
     StockAdjustmentRequest:
       type: object
@@ -159,20 +164,61 @@ components:
       type: object
       required:
         - productId
-        - supplierName
         - quantity
         - totalCost
       properties:
         productId:
           type: string
           format: uuid
+        customerId:
+          type: string
+          format: uuid
+          description: Optional customer ID if purchase is linked to a customer
         supplierName:
           type: string
         quantity:
           type: integer
+        unitPrice:
+          type: number
+          format: decimal
+        weight:
+          type: number
+          format: decimal
         totalCost:
           type: number
           format: decimal
+        initialPaidAmount:
+          type: number
+          format: decimal
+        paymentMethod:
+          type: string
+          enum: [CASH, CHECK, TRANSFER, ESEWA, CARD]
+
+    SettlementRequest:
+      type: object
+      required:
+        - customerId
+        - amount
+        - paymentMethod
+        - transactionType
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: decimal
+        paymentMethod:
+          type: string
+          enum: [CASH, CHECK, TRANSFER, ESEWA, CARD]
+        notes:
+          type: string
+        transactionDate:
+          type: string
+          format: date-time
+        transactionType:
+          type: string
+          enum: [RECEIPT, PAYOUT]
 
     Product:
       type: object
@@ -709,6 +755,64 @@ paths:
                   type: object
 
   # Finance
+  /finance/settlements:
+    post:
+      tags:
+        - Finance
+      summary: Create payment settlement
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettlementRequest'
+      responses:
+        '200':
+          description: Settlement processed
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /finance/customers/{customerId}/unpaid-sales:
+    get:
+      tags:
+        - Finance
+      summary: Get unpaid sales for customer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of unpaid sales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    totalAmount:
+                      type: number
+                    paidAmount:
+                      type: number
+                    balance:
+                      type: number
+                    date:
+                      type: string
+                      format: date-time
+
   /finance/report:
     get:
       tags:
