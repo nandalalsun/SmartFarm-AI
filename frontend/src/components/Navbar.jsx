@@ -22,7 +22,7 @@ export default function Navbar() {
             </Link>
             <div className="hidden md:block">
               <div className="flex items-baseline space-x-4">
-                <NavLink to="/" className={navLinkClass}>
+                <NavLink to="/dashboard" className={navLinkClass}>
                   Dashboard
                 </NavLink>
                 <NavLink to="/customers" className={navLinkClass}>
@@ -39,6 +39,9 @@ export default function Navbar() {
                 </NavLink>
                 <NavLink to="/scan" className={navLinkClass}>
                   Scan Bill
+                </NavLink>
+                <NavLink to="/expenses" className={navLinkClass}>
+                  Expenses
                 </NavLink>
               </div>
             </div>

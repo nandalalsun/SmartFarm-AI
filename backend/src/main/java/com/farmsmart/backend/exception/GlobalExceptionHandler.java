@@ -70,8 +70,10 @@ public class GlobalExceptionHandler {
         body.put("message", "An unexpected error occurred");
         body.put("path", request.getDescription(false).replace("uri=", ""));
 
-        // In a real production app, you might want to log the stack trace here
-        // ex.printStackTrace();
+        // Log the full stack trace
+        System.err.println("❌ EXCEPTION CAUGHT: " + ex.getClass().getName());
+        System.err.println("❌ MESSAGE: " + ex.getMessage());
+        ex.printStackTrace();
 
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }

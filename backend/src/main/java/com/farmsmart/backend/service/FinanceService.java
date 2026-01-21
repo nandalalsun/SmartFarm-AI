@@ -22,6 +22,7 @@ public class FinanceService {
     private PurchaseRepository purchaseRepository;
     private CreditLedgerRepository creditLedgerRepository;
     private PaymentTransactionRepository paymentTransactionRepository;
+    private ExpenseRepository expenseRepository;
     private UnifiedTransactionMapper mapper;
 
     @Transactional
@@ -361,21 +362,30 @@ public class FinanceService {
     public Map<String, Object> getProfitReport() {
         List<Sale> sales = saleRepository.findAll();
         List<Purchase> purchases = purchaseRepository.findAll();
+        List<Expense> expenses = expenseRepository.findAll();
 
         BigDecimal totalRevenue = sales.stream()
                 .map(Sale::getTotalBillAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal totalExpenses = purchases.stream()
+        BigDecimal totalPurchaseCost = purchases.stream()
                 .map(Purchase::getTotalCost)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalOtherExpenses = expenses.stream()
+                .map(Expense::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalExpenses = totalPurchaseCost.add(totalOtherExpenses);
 
         BigDecimal netProfit = totalRevenue.subtract(totalExpenses);
 
         return Map.of(
                 "totalRevenue", totalRevenue,
                 "totalExpenses", totalExpenses,
-                "netProfit", netProfit
+                "netProfit", netProfit,
+                "purchaseCost", totalPurchaseCost,
+                "otherExpenses", totalOtherExpenses
         );
     }
 

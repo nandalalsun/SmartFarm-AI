@@ -24,9 +24,13 @@ public class DashboardService {
         Double totalRevenue = jdbcTemplate.queryForObject(
                 "SELECT COALESCE(SUM(total_bill_amount), 0) FROM sale", Double.class);
 
-        Double totalExpenses = jdbcTemplate.queryForObject(
+        Double totalPurchaseExpenses = jdbcTemplate.queryForObject(
                 "SELECT COALESCE(SUM(total_cost), 0) FROM purchase", Double.class);
 
+        Double totalOtherExpenses = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(SUM(amount), 0) FROM expense", Double.class);
+
+        Double totalExpenses = totalPurchaseExpenses + totalOtherExpenses;
         Double netProfit = totalRevenue - totalExpenses;
 
         Double stockValue = jdbcTemplate.queryForObject(
@@ -91,10 +95,11 @@ public class DashboardService {
             SELECT 
                 to_char(d.date, 'MMM dd') as day,
                 COALESCE(SUM(s.total_bill_amount), 0) as revenue,
-                COALESCE(SUM(p.total_cost), 0) as expense
+                COALESCE(SUM(p.total_cost), 0) + COALESCE(SUM(e.amount), 0) as expense
             FROM dates d
             LEFT JOIN sale s ON DATE(s.created_at) = d.date
             LEFT JOIN purchase p ON DATE(p.purchase_date) = d.date
+            LEFT JOIN expense e ON DATE(e.expense_date) = d.date
             GROUP BY d.date
             ORDER BY d.date ASC
         """;

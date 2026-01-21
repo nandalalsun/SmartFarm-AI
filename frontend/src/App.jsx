@@ -8,7 +8,9 @@ import NewSale from './pages/NewSale';
 import Dashboard from './pages/Dashboard';
 import BillScanner from './pages/BillScanner';
 import Transactions from './pages/Transactions';
+import ExpensesPage from './pages/ExpensesPage';
 import FarmAssistant from './components/FarmAssistant';
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Verify2FA from './pages/Verify2FA';
 import AcceptInvite from './pages/AcceptInvite';
@@ -28,6 +30,7 @@ function App() {
         <div className="min-h-screen bg-slate-950 text-slate-100">
           <Routes>
             {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/verify-2fa" element={<Verify2FA />} />
             <Route path="/accept-invite" element={<AcceptInvite />} />
@@ -42,12 +45,14 @@ function App() {
               <ProtectedRoute>
                 <Navbar />
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/customers" element={<Customers />} />
                   <Route path="/products" element={<Products />} />
                   <Route path="/sales/new" element={<NewSale />} />
                   <Route path="/scan" element={<BillScanner />} />
+                  <Route path="/scan" element={<BillScanner />} />
                   <Route path="/transactions" element={<Transactions />} />
+                  <Route path="/expenses" element={<ExpensesPage />} />
                   
                   {/* Account Routes */}
                   <Route path="/account/profile" element={<ProfilePage />} />

@@ -23,7 +23,7 @@ const Login = () => {
                 navigate('/verify-2fa', { state: { email } });
             } else {
                 login(data.accessToken, data.refreshToken);
-                navigate('/');
+                navigate('/dashboard');
             }
         } catch (err) {
             setError(err.response?.data?.message || 'Login failed');
@@ -42,7 +42,7 @@ const Login = () => {
         <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-slate-900 rounded-2xl shadow-xl border border-slate-800 p-8">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-slate-100 mb-2">Welcome Back</h1>
+                    <h1 className="text-3xl font-bold text-slate-100 mb-2">Welcome</h1>
                     <p className="text-slate-400">Sign in to FarmSmart AI</p>
                 </div>
 
