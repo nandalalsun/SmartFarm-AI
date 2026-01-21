@@ -1,7 +1,7 @@
 package com.farmsmart.backend.service;
 
 import com.farmsmart.backend.auth.entity.User;
-import com.farmsmart.backend.auth.repository.UserRepository;
+import com.farmsmart.backend.auth.service.UserService;
 import com.farmsmart.backend.dto.ExpenseDTO;
 import com.farmsmart.backend.entity.Expense;
 import com.farmsmart.backend.entity.ExpenseCategory;
@@ -21,7 +21,7 @@ public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
     private final ExpenseCategoryRepository categoryRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     @Transactional
     public ExpenseDTO createExpense(ExpenseDTO dto) {
@@ -31,11 +31,7 @@ public class ExpenseService {
         ExpenseCategory category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Expense Category not found"));
 
-        if (dto.getRecordedByUserId() == null) {
-            throw new IllegalArgumentException("Recorded By User ID is required");
-        }
-        User user = userRepository.findById(dto.getRecordedByUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User user = userService.getCurrentUserEntity();
 
         Expense expense = new Expense();
         expense.setAmount(dto.getAmount());

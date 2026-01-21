@@ -25,18 +25,21 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    /**
-     * Get current authenticated user.
-     * Returns AuthenticatedUser abstraction, not the entity.
-     */
     public AuthenticatedUser getCurrentUser() {
+        return mapToAuthenticatedUser(getCurrentUserEntity());
+    }
+
+    /**
+     * Get current authenticated user entity.
+     * Internal use for other services to set relationships.
+     */
+    public User getCurrentUserEntity() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         
         if (principal instanceof UserDetails) {
             String email = ((UserDetails) principal).getUsername();
-            User user = userRepository.findByEmail(email)
+            return userRepository.findByEmail(email)
                     .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
-            return mapToAuthenticatedUser(user);
         }
         
         throw new IllegalStateException("No authenticated user found");

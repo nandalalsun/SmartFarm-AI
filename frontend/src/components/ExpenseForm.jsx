@@ -9,14 +9,12 @@ const ExpenseForm = ({ onExpenseAdded }) => {
         expenseDate: new Date().toISOString().split('T')[0],
         paymentMethod: 'CASH',
         categoryId: '',
-        recordedByUserId: '' // logic needs to handle this or backend extract from token
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
     useEffect(() => {
         fetchCategories();
-        fetchCurrentUser();
     }, []);
 
     const fetchCategories = async () => {
@@ -34,15 +32,6 @@ const ExpenseForm = ({ onExpenseAdded }) => {
         }
     };
     
-    const fetchCurrentUser = async () => {
-        console.log('🔍 Fetching current user from: /auth/me');
-        try {
-             const response = await api.get('/auth/me');
-             setFormData(prev => ({ ...prev, recordedByUserId: response.data.id }));
-        } catch (err) {
-            console.error("❌ Failed to fetch user", err);
-        }
-    }
 
     const handleChange = (e) => {
         const { name, value } = e.target;
