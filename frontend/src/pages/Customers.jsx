@@ -1,11 +1,18 @@
-import { useState, useEffect } from 'react';
-import api from '../api/axios';
+import { useState } from 'react';
+import { 
+  useGetCustomersQuery, 
+  useAddCustomerMutation, 
+  useLazyGetCustomerProfitQuery 
+} from '../api/baseApi';
 import Toast from '../components/Toast';
 
 import SettleBalanceModal from '../components/SettleBalanceModal';
 
 export default function Customers() {
-  const [customers, setCustomers] = useState([]);
+  const { data: customers = [], isLoading } = useGetCustomersQuery();
+  const [addCustomer, { isLoading: isAdding }] = useAddCustomerMutation();
+  const [getCustomerProfit] = useLazyGetCustomerProfitQuery();
+
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -23,18 +30,7 @@ export default function Customers() {
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [addModalOpen, setAddModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  const fetchCustomers = async () => {
-    try {
-      const res = await api.get('/customers');
-      setCustomers(res.data);
-    } catch (err) {
-      console.error('Failed to fetch customers', err);
-    }
-  };
+  // Manual fetching removed in favor of hook subscription
 
   const filteredCustomers = customers.filter(c => {
     const q = search.toLowerCase();
@@ -52,8 +48,8 @@ export default function Customers() {
   const handleViewProfit = async customer => {
     setSelectedCustomer(customer);
     try {
-      const res = await api.get(`/customers/${customer.id}/profit`);
-      setProfitData(res.data);
+      const result = await getCustomerProfit(customer.id).unwrap();
+      setProfitData(result);
       setProfitModalOpen(true);
     } catch (err) {
       console.error('Failed to fetch profit', err);
@@ -73,7 +69,7 @@ export default function Customers() {
       return;
     }
     try {
-      await api.post('/customers', form);
+      await addCustomer(form).unwrap();
       setForm({
         name: '',
         phone: '',
@@ -82,14 +78,13 @@ export default function Customers() {
         customerType: 'FARMER',
         creditLimit: '',
       });
-      fetchCustomers();
       setToast({ message: '✓ Customer added successfully!', type: 'success' });
     } catch (err) {
       console.error('Failed to add customer', err);
       // Backend throws RuntimeException which might come as 500
       const msg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
+        err?.data?.message ||
+        err?.data?.error ||
         'Failed to add customer (check if phone exists)';
       setToast({ message: msg, type: 'error' });
     }
@@ -375,7 +370,7 @@ export default function Customers() {
           customer={selectedCustomer}
           onClose={() => setSettleModalOpen(false)}
           onSuccess={() => {
-            fetchCustomers();
+            // fetchCustomers(); - Handled by invalidation
             setToast({ message: '✓ Balance settled successfully!', type: 'success' });
           }}
         />

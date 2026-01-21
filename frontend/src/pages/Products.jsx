@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 import Toast from '../components/Toast';
 import StockAdjustmentModal from '../components/StockAdjustmentModal';
+import { useGetProductsQuery, useAddProductMutation } from '../api/baseApi';
 
 export default function Products() {
-  const [products, setProducts] = useState([]);
+  const { data: products = [], isLoading, isFetching } = useGetProductsQuery();
+  const [addProduct, { isLoading: isAdding }] = useAddProductMutation();
+
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [form, setForm] = useState({
@@ -23,18 +26,7 @@ export default function Products() {
     setOpenDropdownId(openDropdownId === productId ? null : productId);
   };
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
-    try {
-      const res = await api.get('/products');
-      setProducts(res.data);
-    } catch (err) {
-      console.error('Failed to fetch products', err);
-    }
-  };
+  // No manual fetchProducts needed, handled by hook subscription
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -43,7 +35,7 @@ export default function Products() {
       return;
     }
     try {
-      await api.post('/products', form);
+      await addProduct(form).unwrap();
       setForm({
         name: '',
         costPrice: '',
@@ -52,11 +44,10 @@ export default function Products() {
         category: 'FEED',
         unit: 'KG',
       });
-      fetchProducts();
       setToast({ message: '✓ Product added successfully!', type: 'success' });
     } catch (err) {
       console.error('Failed to add product', err);
-      setToast({ message: err.response?.data?.message || 'Failed to add product', type: 'error' });
+      setToast({ message: err?.data?.message || 'Failed to add product', type: 'error' });
     }
   };
 
@@ -164,7 +155,7 @@ export default function Products() {
                   type="submit"
                   className="px-6 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-medium"
                 >
-                  Add Product
+                  {isAdding ? 'Adding...' : 'Add Product'}
                 </button>
               </div>
             </form>
@@ -269,7 +260,7 @@ export default function Products() {
         onClose={() => setIsAdjustmentModalOpen(false)}
         product={selectedProduct}
         onSuccess={() => {
-          fetchProducts();
+          // fetchProducts(); - Auto refetched by tag invalidation
           setToast({ message: 'Stock adjusted successfully', type: 'success' });
         }}
       />

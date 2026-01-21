@@ -12,6 +12,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
+
 @Service
 @AllArgsConstructor
 public class FinanceService {
@@ -26,6 +29,11 @@ public class FinanceService {
     private UnifiedTransactionMapper mapper;
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "products", allEntries = true),
+            @CacheEvict(value = "dashboardStats", allEntries = true),
+            @CacheEvict(value = "customers", allEntries = true)
+    })
     public Sale createSale(SaleRequestDTO request) {
         Customer customer = loadCustomer(request.getCustomerId());
 
@@ -162,6 +170,11 @@ public class FinanceService {
 
     // CREATE PURCHASE
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "products", allEntries = true),
+            @CacheEvict(value = "dashboardStats", allEntries = true),
+            @CacheEvict(value = "customers", allEntries = true)
+    })
     public Purchase createPurchase(PurchaseDTO request) {
         Product product = loadProduct(request.getProductId());
         updateStock(product, request.getQuantity());

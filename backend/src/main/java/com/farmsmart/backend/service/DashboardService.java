@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.cache.annotation.Cacheable;
+
 @Service
 public class DashboardService {
 
@@ -20,6 +22,7 @@ public class DashboardService {
         this.farmAssistantService = farmAssistantService;
     }
 
+    @Cacheable(value = "dashboardStats")
     public DashboardStatsDTO getDashboardStats() {
         Double totalRevenue = jdbcTemplate.queryForObject(
                 "SELECT COALESCE(SUM(total_bill_amount), 0) FROM sale", Double.class);

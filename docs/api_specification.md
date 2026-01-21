@@ -207,3 +207,26 @@ RAG-based chat assistant.
   "message": "How much feed do we have left?"
 }
 ```
+
+---
+
+## 💸 12. Expense Management (`/finance`)
+
+Manage operational expenses and categories.
+
+| Method | Path | Description | Access |
+|:-------|:-----|:------------|:-------|
+| `POST` | `/finance/expenses` | Record a new expense. | Authenticated |
+| `GET` | `/finance/expenses` | List all expenses. | Authenticated |
+| `GET` | `/finance/expense-categories` | Get all expense categories. | Authenticated |
+
+**Request Body (Create Expense):**
+```json
+{
+  "amount": 1500.00,
+  "description": "Tractor repair",
+  "expenseDate": "2023-10-27",
+  "paymentMethod": "CASH", // CASH, BANK_TRANSFER, CHECK, ESEWA, KHALTI, CARD, OTHER
+  "categoryId": "UUID"
+}
+```

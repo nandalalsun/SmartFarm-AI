@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { api } from './api/baseApi';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
@@ -24,6 +27,21 @@ import InvitationPage from './features/admin/InvitationPage';
 import { TermsPage, PrivacyPage, AboutPage } from './features/legal/LegalPages';
 
 function App() {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    // Prefetch Dashboard and Products on initialization
+    dispatch(api.endpoints.getDashboardStats.initiate());
+    dispatch(api.endpoints.getRevenueExpense.initiate());
+    dispatch(api.endpoints.getStockMovement.initiate());
+    dispatch(api.endpoints.getLowStockAlerts.initiate());
+    dispatch(api.endpoints.getAgingCredits.initiate());
+    dispatch(api.endpoints.getProducts.initiate());
+    dispatch(api.endpoints.getCustomers.initiate());
+    dispatch(api.endpoints.getExpenses.initiate());
+    dispatch(api.endpoints.getExpenseCategories.initiate());
+  }, [dispatch]);
+
   return (
     <AuthProvider>
       <BrowserRouter>

@@ -1,6 +1,13 @@
-import { useState, useEffect } from 'react';
-import api from '../api/axios';
+import { useState } from 'react';
 import SettleBalanceModal from '../components/SettleBalanceModal'; // Import Modal
+import { 
+  useGetDashboardStatsQuery,
+  useGetRevenueExpenseQuery,
+  useGetStockMovementQuery,
+  useGetLowStockAlertsQuery,
+  useGetAgingCreditsQuery,
+  useGetAIInsightsQuery
+} from '../api/baseApi';
 
 import {
   AreaChart,
@@ -27,63 +34,31 @@ import {
 } from 'lucide-react';
 import KPICard from '../components/KPICard';
 
+  /* -------------------------------
+     RTK QUERY HOOKS
+  -------------------------------- */
 const Dashboard = () => {
-  const [stats, setStats] = useState(null);
-  const [revenueExpense, setRevenueExpense] = useState([]);
-  const [stockMovement, setStockMovement] = useState([]);
-  const [lowStockAlerts, setLowStockAlerts] = useState([]);
-  const [agingCredits, setAgingCredits] = useState([]);
-  const [insights, setInsights] = useState([]);
+  const { data: stats, isLoading: statsLoading, isFetching: statsFetching, refetch: refetchStats } = useGetDashboardStatsQuery();
+  const { data: revenueExpense = [], isFetching: revFetching, refetch: refetchRev } = useGetRevenueExpenseQuery();
+  const { data: stockMovement = [], isFetching: stockFetching, refetch: refetchStock } = useGetStockMovementQuery();
+  const { data: lowStockAlerts = [], isFetching: lowStockFetching, refetch: refetchLowStock } = useGetLowStockAlertsQuery();
+  const { data: agingCredits = [], isFetching: agingFetching, refetch: refetchAging } = useGetAgingCreditsQuery();
+  const { data: insights = [], isLoading: insightsLoading, isFetching: insightsFetching, refetch: refetchInsights } = useGetAIInsightsQuery();
 
-  const [loading, setLoading] = useState(true);
-  const [insightsLoading, setInsightsLoading] = useState(true);
+  const handleRefresh = () => {
+    refetchStats();
+    refetchRev();
+    refetchStock();
+    refetchLowStock();
+    refetchAging();
+    refetchInsights();
+  };
+
+  const isBackgroundUpdating = statsFetching || revFetching || stockFetching || lowStockFetching || agingFetching || insightsFetching;
   
   // Settle Modal State
   const [settleModalOpen, setSettleModalOpen] = useState(false);
   const [selectedCustomerForSettle, setSelectedCustomerForSettle] = useState(null);
-
-  useEffect(() => {
-    fetchDashboardData();
-    fetchAIInsights();
-  }, []);
-
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      const [statsRes, revExpRes, stockMovRes, lowStockRes, agingCredRes] = await Promise.all([
-        api.get('/dashboard/stats'),
-        api.get('/dashboard/revenue-expense'),
-        api.get('/dashboard/stock-movement'),
-        api.get('/dashboard/alerts/low-stock'),
-        api.get('/dashboard/alerts/aging-credit'),
-      ]);
-
-      setStats(statsRes.data);
-      setRevenueExpense(revExpRes.data);
-      setStockMovement(stockMovRes.data);
-      setLowStockAlerts(lowStockRes.data);
-      setAgingCredits(agingCredRes.data);
-    } catch (error) {
-      console.error('Dashboard data fetch failed:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* -------------------------------
-     AI INSIGHTS (NON-BLOCKING)
-  -------------------------------- */
-  const fetchAIInsights = async () => {
-    setInsightsLoading(true);
-    try {
-      const res = await api.get('/dashboard/ai-insights');
-      setInsights(res.data);
-    } catch (error) {
-      console.error('AI insights fetch failed:', error);
-    } finally {
-      setInsightsLoading(false);
-    }
-  };
 
   const handleSettleClick = (creditItem) => {
     // We need customer ID and current balance. 
@@ -103,7 +78,7 @@ const Dashboard = () => {
     setSettleModalOpen(true);
   };
 
-  if (loading) {
+  if (statsLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="space-y-4 text-center">
@@ -126,15 +101,12 @@ const Dashboard = () => {
             <p className="text-slate-400 mt-1">Real-time business intelligence</p>
           </div>
 
-          <button
-            onClick={() => {
-              fetchDashboardData();
-              fetchAIInsights();
-            }}
+            <button
+            onClick={handleRefresh}
             className="bg-forest-green hover:bg-forest-green-light px-4 py-2 rounded-lg font-medium transition flex items-center gap-2"
           >
-            <Activity className="w-4 h-4" />
-            Refresh
+            <Activity className={`w-4 h-4 ${isBackgroundUpdating ? 'animate-spin' : ''}`} />
+            {isBackgroundUpdating ? 'Updating...' : 'Refresh'}
           </button>
         </div>
 
@@ -318,7 +290,7 @@ const Dashboard = () => {
             customer={selectedCustomerForSettle}
             onClose={() => setSettleModalOpen(false)}
             onSuccess={() => {
-              fetchDashboardData();
+              handleRefresh();
             }}
           />
         )}

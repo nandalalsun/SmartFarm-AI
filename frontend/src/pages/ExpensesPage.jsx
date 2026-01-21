@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/axios';
+import { 
+    useGetExpensesQuery, 
+    useGetExpenseCategoriesQuery, 
+    useAddExpenseMutation 
+} from '../api/baseApi';
+import api from '../api/axios'; // Keeping for auth/me only
 import Toast from '../components/Toast';
 
 const ExpensesPage = () => {
-    const [expenses, setExpenses] = useState([]);
-    const [categories, setCategories] = useState([]);
+    const { data: expenses = [], isLoading: expensesLoading } = useGetExpensesQuery();
+    const { data: categories = [] } = useGetExpenseCategoriesQuery();
+    const [addExpense] = useAddExpenseMutation();
+
     const [filteredExpenses, setFilteredExpenses] = useState([]);
     const [filterCategory, setFilterCategory] = useState('');
     const [filterDate, setFilterDate] = useState('');
-    const [loading, setLoading] = useState(true);
+    // const [loading, setLoading] = useState(true); // Handled by hook
     const [addExpenseModalOpen, setAddExpenseModalOpen] = useState(false);
     const [toast, setToast] = useState({ message: '', type: '' });
     
@@ -22,10 +29,15 @@ const ExpensesPage = () => {
     });
 
     useEffect(() => {
-        fetchExpenses();
-        fetchCategories();
+        // fetchExpenses(); - managed by RTK Query
+        // fetchCategories(); - managed by RTK Query
         fetchCurrentUser();
-    }, []);
+        
+        // Auto-select first category if available and not selected
+        if (categories.length > 0 && !formData.categoryId) {
+             setFormData(prev => ({ ...prev, categoryId: categories[0].id }));
+        }
+    }, [categories]);
 
     useEffect(() => {
         let result = expenses;
@@ -38,31 +50,7 @@ const ExpensesPage = () => {
         setFilteredExpenses(result);
     }, [expenses, filterCategory, filterDate]);
 
-    const fetchExpenses = async () => {
-        setLoading(true);
-        try {
-            const response = await api.get('/finance/expenses');
-            setExpenses(response.data);
-            setFilteredExpenses(response.data);
-        } catch (err) {
-            console.error("Failed to fetch expenses", err);
-            setToast({ message: 'Failed to load expenses', type: 'error' });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchCategories = async () => {
-        try {
-            const response = await api.get('/finance/expense-categories');
-            setCategories(response.data);
-            if(response.data.length > 0) {
-                setFormData(prev => ({ ...prev, categoryId: response.data[0].id }));
-            }
-        } catch (err) {
-            console.error("Failed to fetch categories", err);
-        }
-    };
+    /* Manual fetchers removed */
     
     const fetchCurrentUser = async () => {
         try {
@@ -82,8 +70,7 @@ const ExpensesPage = () => {
         e.preventDefault();
         
         try {
-            await api.post('/finance/expenses', formData);
-            fetchExpenses();
+            await addExpense(formData).unwrap();
             setToast({ message: '✓ Expense recorded successfully!', type: 'success' });
             setAddExpenseModalOpen(false);
             // Reset form (keep date and user)
@@ -95,7 +82,7 @@ const ExpensesPage = () => {
             }));
         } catch (err) {
             console.error("Failed to save expense", err);
-            setToast({ message: err.response?.data?.message || 'Failed to save expense', type: 'error' });
+            setToast({ message: err?.data?.message || 'Failed to save expense', type: 'error' });
         }
     };
 
@@ -270,7 +257,7 @@ const ExpensesPage = () => {
                             </tr>
                         </thead>
                         <tbody className="bg-slate-800 divide-y divide-slate-700">
-                            {loading ? (
+                            {expensesLoading ? (
                                 <tr><td colSpan="6" className="px-6 py-4 text-center text-slate-400">Loading...</td></tr>
                             ) : filteredExpenses.length === 0 ? (
                                 <tr><td colSpan="6" className="px-6 py-4 text-center text-slate-400">No expenses found</td></tr>

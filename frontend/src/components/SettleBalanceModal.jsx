@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/axios';
+import { useSettleBalanceMutation } from '../api/baseApi';
 import { X, CreditCard, Banknote, Landmark, Check, AlertCircle, Info } from 'lucide-react';
 
 const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
@@ -9,6 +9,7 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
   const [remarks, setRemarks] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [settleBalance, { isLoading: isSettling }] = useSettleBalanceMutation();
 
   const calculatePreview = () => {
     const payAmount = parseFloat(amount) || 0;
@@ -40,12 +41,12 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
         notes: remarks || `Balance Settlement (${transactionType})`
       };
 
-      await api.post('/finance/settlements', payload);
+      await settleBalance(payload).unwrap();
       onSuccess();
       onClose();
     } catch (err) {
       console.error('Settlement failed', err);
-      setError(err.response?.data?.message || 'Payment settlement failed. Please try again.');
+      setError(err?.data?.message || 'Payment settlement failed. Please try again.');
     } finally {
       setLoading(false);
     }
