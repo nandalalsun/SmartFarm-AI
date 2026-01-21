@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import authService from '../services/authService';
 import { Lock, Mail, AlertCircle, Chrome } from 'lucide-react';
@@ -11,6 +11,14 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
+    React.useEffect(() => {
+        const errorMsg = searchParams.get('error');
+        if (errorMsg) {
+            setError(errorMsg);
+        }
+    }, [searchParams]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
