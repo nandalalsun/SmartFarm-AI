@@ -28,6 +28,7 @@ erDiagram
     SaleItem {
         UUID id PK
         Integer quantity
+        BigDecimal weight
         BigDecimal unitPrice
         BigDecimal lineTotal
         UUID sale_id FK
@@ -43,6 +44,7 @@ erDiagram
         UUID customer_id FK
         UUID sale_id FK
         UUID purchase_id FK
+        UUID payment_transaction_id FK
     }
     Sale {
         UUID id PK
@@ -69,8 +71,11 @@ erDiagram
         UUID id PK
         BigDecimal amountPaid
         String paymentMethod
+        String transactionType
+        String remarks
         LocalDateTime paymentDate
         UUID sale_id FK
+        UUID purchase_id FK
         UUID customer_id FK
     }
     BillStaging {
@@ -96,7 +101,11 @@ erDiagram
         UUID id PK
         String supplierName
         Integer quantity
+        BigDecimal unitPrice
+        BigDecimal weight
         BigDecimal totalCost
+        BigDecimal initialPaidAmount
+        BigDecimal remainingBalance
         LocalDateTime purchaseDate
         UUID product_id FK
         UUID customer_id FK
@@ -164,11 +173,13 @@ erDiagram
     Customer ||--|{ CreditLedger : "has"
     Sale |o--o| CreditLedger : "linked_to"
     Purchase ||--|{ CreditLedger : "generates"
+    PaymentTransaction |o--o| CreditLedger : "settles"
     Customer ||--|{ Sale : "purchases"
     User ||--|{ Sale : "creates"
     Product ||--|{ StockAdjustment : "has"
     User ||--|{ StockAdjustment : "performs"
     Sale ||--|{ PaymentTransaction : "has"
+    Purchase ||--|{ PaymentTransaction : "has"
     Customer ||--|{ PaymentTransaction : "makes"
     Product ||--|{ Purchase : "is_bought_in"
     Customer ||--|{ Purchase : "involved_in"

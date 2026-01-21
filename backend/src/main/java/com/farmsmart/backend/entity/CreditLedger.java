@@ -19,8 +19,12 @@ public class CreditLedger {
     @OneToOne
     private Sale sale;
 
-    @ManyToOne
+    @ManyToOne(optional = true)
     private Purchase purchase;
+    
+    @OneToOne(optional = true)
+    @JoinColumn(name = "payment_transaction_id")
+    private PaymentTransaction paymentTransaction;
 
     private BigDecimal originalDebt;
     private BigDecimal currentBalance; // Remaining debt to pay

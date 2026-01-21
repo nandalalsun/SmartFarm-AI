@@ -1,6 +1,7 @@
 package com.farmsmart.backend.repository;
 
 import com.farmsmart.backend.entity.CreditLedger;
+import com.farmsmart.backend.entity.PaymentTransaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.UUID;
@@ -9,4 +10,6 @@ public interface CreditLedgerRepository extends JpaRepository<CreditLedger, UUID
     List<CreditLedger> findByCustomerId(UUID customerId);
     
     List<CreditLedger> findByCustomerIdAndStatusInOrderByDueDateAsc(UUID customerId, List<String> statuses);
+
+    List<CreditLedger> findByPaymentTransaction(PaymentTransaction txn);
 }

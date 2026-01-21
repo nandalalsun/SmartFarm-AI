@@ -8,5 +8,6 @@ import java.util.UUID;
 public class SaleItemDTO {
     private UUID productId;
     private Integer quantity;
+    private BigDecimal weight;
     private BigDecimal unitPrice;
 }

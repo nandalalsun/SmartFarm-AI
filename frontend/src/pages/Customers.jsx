@@ -1,11 +1,18 @@
-import { useState, useEffect } from 'react';
-import api from '../api/axios';
+import { useState } from 'react';
+import { 
+  useGetCustomersQuery, 
+  useAddCustomerMutation, 
+  useLazyGetCustomerProfitQuery 
+} from '../api/baseApi';
 import Toast from '../components/Toast';
 
 import SettleBalanceModal from '../components/SettleBalanceModal';
 
 export default function Customers() {
-  const [customers, setCustomers] = useState([]);
+  const { data: customers = [], isLoading } = useGetCustomersQuery();
+  const [addCustomer, { isLoading: isAdding }] = useAddCustomerMutation();
+  const [getCustomerProfit] = useLazyGetCustomerProfitQuery();
+
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -23,18 +30,7 @@ export default function Customers() {
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [addModalOpen, setAddModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  const fetchCustomers = async () => {
-    try {
-      const res = await api.get('/customers');
-      setCustomers(res.data);
-    } catch (err) {
-      console.error('Failed to fetch customers', err);
-    }
-  };
+  // Manual fetching removed in favor of hook subscription
 
   const filteredCustomers = customers.filter(c => {
     const q = search.toLowerCase();
@@ -52,8 +48,8 @@ export default function Customers() {
   const handleViewProfit = async customer => {
     setSelectedCustomer(customer);
     try {
-      const res = await api.get(`/customers/${customer.id}/profit`);
-      setProfitData(res.data);
+      const result = await getCustomerProfit(customer.id).unwrap();
+      setProfitData(result);
       setProfitModalOpen(true);
     } catch (err) {
       console.error('Failed to fetch profit', err);
@@ -73,7 +69,7 @@ export default function Customers() {
       return;
     }
     try {
-      await api.post('/customers', form);
+      await addCustomer(form).unwrap();
       setForm({
         name: '',
         phone: '',
@@ -82,14 +78,13 @@ export default function Customers() {
         customerType: 'FARMER',
         creditLimit: '',
       });
-      fetchCustomers();
       setToast({ message: '✓ Customer added successfully!', type: 'success' });
     } catch (err) {
       console.error('Failed to add customer', err);
       // Backend throws RuntimeException which might come as 500
       const msg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
+        err?.data?.message ||
+        err?.data?.error ||
         'Failed to add customer (check if phone exists)';
       setToast({ message: msg, type: 'error' });
     }
@@ -109,13 +104,13 @@ export default function Customers() {
       {/* Add Customer Modal */}
       {addModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl shadow-2xl">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
             {/* Header */}
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-700">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-700 shrink-0">
               <h2 className="text-xl font-semibold text-white">Add Customer</h2>
               <button
                 onClick={() => setAddModalOpen(false)}
-                className="text-slate-400 hover:text-white text-xl"
+                className="text-slate-400 hover:text-white text-xl p-2 hover:bg-slate-800 rounded-lg transition-colors"
               >
                 ×
               </button>
@@ -127,74 +122,74 @@ export default function Customers() {
                 await handleSubmit(e);
                 setAddModalOpen(false);
               }}
-              className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+              className="flex-1 overflow-y-auto p-6"
             >
-              <input
-                autoFocus
-                type="text"
-                placeholder="Name"
-                value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                className="md:col-span-2 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Name"
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  className="md:col-span-2 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
 
-              <input
-                type="text"
-                placeholder="Phone"
-                value={form.phone}
-                onChange={e => setForm({ ...form, phone: e.target.value })}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
+                <input
+                  type="text"
+                  placeholder="Phone"
+                  value={form.phone}
+                  onChange={e => setForm({ ...form, phone: e.target.value })}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
 
-              <input
-                type="email"
-                placeholder="Email"
-                value={form.email}
-                onChange={e => setForm({ ...form, email: e.target.value })}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={form.email}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
 
-              <input
-                type="text"
-                placeholder="Address"
-                value={form.address}
-                onChange={e => setForm({ ...form, address: e.target.value })}
-                className="md:col-span-2 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
+                <input
+                  type="text"
+                  placeholder="Address"
+                  value={form.address}
+                  onChange={e => setForm({ ...form, address: e.target.value })}
+                  className="md:col-span-2 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
 
-              <select
-                value={form.customerType}
-                onChange={e => setForm({ ...form, customerType: e.target.value })}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-              >
-                <option value="FARMER">FARMER</option>
-                <option value="BUTCHER">BUTCHER</option>
-                <option value="RETAIL">RETAIL</option>
-              </select>
+                <select
+                  value={form.customerType}
+                  onChange={e => setForm({ ...form, customerType: e.target.value })}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                >
+                  <option value="FARMER">FARMER</option>
+                  <option value="BUTCHER">BUTCHER</option>
+                  <option value="RETAIL">RETAIL</option>
+                </select>
 
-              <input
-                type="number"
-                placeholder="Credit Limit"
-                value={form.creditLimit}
-                onChange={e => setForm({ ...form, creditLimit: e.target.value })}
-                className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
+                <input
+                  type="number"
+                  placeholder="Credit Limit"
+                  value={form.creditLimit}
+                  onChange={e => setForm({ ...form, creditLimit: e.target.value })}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
+              </div>
 
-              {/* Footer */}
-              <div className="md:col-span-2 flex justify-end gap-3 pt-4">
+              <div className="mt-6 flex gap-3 sticky bottom-0 bg-slate-900 pt-4 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setAddModalOpen(false)}
-                  className="px-5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white"
+                  className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium transition-colors"
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-medium"
+                  className="flex-1 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
                 >
-                  Add Customer
+                  Save Customer
                 </button>
               </div>
             </form>
@@ -264,14 +259,27 @@ export default function Customers() {
                 <td className="px-6 py-4 whitespace-nowrap text-white">{c.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-slate-300">{c.customerType}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-slate-300">{c.phone}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-emerald-400 font-mono">
-                  ${c.currentTotalBalance}
+                <td className={`px-6 py-4 whitespace-nowrap font-mono font-medium ${
+                  c.currentTotalBalance > 0 
+                    ? 'text-emerald-400' 
+                    : c.currentTotalBalance < 0 
+                      ? 'text-rose-400' 
+                      : 'text-slate-500'
+                }`}>
+                  {c.currentTotalBalance > 0 ? '+' : c.currentTotalBalance < 0 ? '-' : ''}${Math.abs(c.currentTotalBalance || 0).toLocaleString()}
+                  <span className="text-[10px] ml-1 opacity-70 uppercase">
+                    {c.currentTotalBalance > 0 ? 'Recv' : c.currentTotalBalance < 0 ? 'Pay' : ''}
+                  </span>
                 </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end gap-3">
-                  {c.currentTotalBalance > 0 && (
+                  {Math.abs(c.currentTotalBalance) > 0.01 && (
                     <button
                       onClick={() => handleSettle(c)}
-                      className="text-emerald-400 hover:text-emerald-300 font-medium text-sm flex items-center gap-1 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20 transition-all hover:bg-emerald-500/20"
+                      className={`${
+                        c.currentTotalBalance > 0 
+                          ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20' 
+                          : 'text-rose-400 bg-rose-500/10 border-rose-500/20 hover:bg-rose-500/20'
+                      } font-medium text-sm flex items-center gap-1 px-3 py-1.5 rounded-lg border transition-all`}
                     >
                       <span className="text-xs">Settle</span>
                     </button>
@@ -362,7 +370,7 @@ export default function Customers() {
           customer={selectedCustomer}
           onClose={() => setSettleModalOpen(false)}
           onSuccess={() => {
-            fetchCustomers();
+            // fetchCustomers(); - Handled by invalidation
             setToast({ message: '✓ Balance settled successfully!', type: 'success' });
           }}
         />

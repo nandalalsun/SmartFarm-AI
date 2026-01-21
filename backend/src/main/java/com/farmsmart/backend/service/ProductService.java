@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+
 @Service
 public class ProductService {
     @Autowired
@@ -19,10 +22,12 @@ public class ProductService {
     @Autowired
     private StockAdjustmentRepository stockAdjustmentRepository;
 
+    @Cacheable(value = "products")
     public List<Product> getAllProducts() {
         return repository.findAll();
     }
 
+    @CacheEvict(value = "products", allEntries = true)
     public Product createProduct(Product product) {
         // product (name and category ignore case sensitive) should be unique
         if (repository.existsByNameIgnoreCaseAndCategoryIgnoreCase(product.getName(), product.getCategory())) {
@@ -37,6 +42,7 @@ public class ProductService {
     }
 
     @Transactional
+    @CacheEvict(value = "products", allEntries = true)
     public StockAdjustment adjustStock(StockAdjustmentDTO dto) {
         Product product = getProduct(dto.productId());
         

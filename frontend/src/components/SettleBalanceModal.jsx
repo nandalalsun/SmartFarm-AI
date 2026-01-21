@@ -1,58 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import api from '../api/axios';
+import { useSettleBalanceMutation } from '../api/baseApi';
 import { X, CreditCard, Banknote, Landmark, Check, AlertCircle, Info } from 'lucide-react';
 
 const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
   const [amount, setAmount] = useState('');
+  const [transactionType, setTransactionType] = useState(customer.currentTotalBalance < 0 ? 'PAYOUT' : 'RECEIPT');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [remarks, setRemarks] = useState('');
-  const [unpaidSales, setUnpaidSales] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState(null);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetchUnpaidSales();
-  }, [customer.id]);
-
-  useEffect(() => {
-    calculatePreview();
-  }, [amount, customer.currentTotalBalance]);
-
-  const fetchUnpaidSales = async () => {
-    try {
-      const res = await api.get(`/finance/customers/${customer.id}/unpaid-sales`);
-      setUnpaidSales(res.data);
-    } catch (err) {
-      console.error('Failed to fetch unpaid sales', err);
-    }
-  };
+  const [settleBalance, { isLoading: isSettling }] = useSettleBalanceMutation();
 
   const calculatePreview = () => {
     const payAmount = parseFloat(amount) || 0;
-    if (payAmount <= 0) {
-      setPreview(null);
-      return;
+    const currentBalance = customer.currentTotalBalance || 0;
+    
+    // PAYOUT (We pay them): Increases balance (moves toward positive).
+    // RECEIPT (They pay us): Decreases balance (moves toward negative).
+    let newBalance = currentBalance;
+    if (transactionType === 'PAYOUT') {
+        newBalance = currentBalance + payAmount;
+    } else {
+        newBalance = currentBalance - payAmount;
     }
 
-    const newBalance = Math.max(0, customer.currentTotalBalance - payAmount);
-    
-    // Simulate FIFO payment distribution for preview
-    let remaining = payAmount;
-    let salesAffected = 0;
-    
-    // Simple logic just to show user "X sales will be cleared/updated"
-    // The exact logic is on backend, but we can mimic it for UI feedback
-    const affectedSalesCount = unpaidSales.reduce((count, sale) => {
-      if (remaining <= 0) return count;
-      remaining -= Math.min(sale.remainingBalance, remaining);
-      return count + 1;
-    }, 0);
-
-    setPreview({
-      newBalance,
-      affectedSalesCount
-    });
+    return { newBalance };
   };
 
   const handleSubmit = async (e) => {
@@ -65,15 +37,16 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
         customerId: customer.id,
         amount: parseFloat(amount),
         paymentMethod,
-        remarks: remarks || 'Balance Settlement'
+        transactionType,
+        notes: remarks || `Balance Settlement (${transactionType})`
       };
 
-      await api.post('/finance/payments/settle', payload);
+      await settleBalance(payload).unwrap();
       onSuccess();
       onClose();
     } catch (err) {
       console.error('Settlement failed', err);
-      setError(err.response?.data?.message || 'Payment settlement failed. Please try again.');
+      setError(err?.data?.message || 'Payment settlement failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -119,20 +92,53 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
             <div>
               <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Total Outstanding</p>
               <div className="text-3xl font-mono font-bold text-white flex items-baseline gap-1">
-                <span className="text-lg text-slate-500">₹</span>
+                <span className="text-lg text-slate-500">$</span>
                 {customer.currentTotalBalance?.toLocaleString()}
               </div>
             </div>
 
-            {preview && (
+            {amount && parseFloat(amount) > 0 && (
               <div className="text-right animate-in slide-in-from-right-4 duration-300">
                 <p className="text-emerald-400 text-sm font-medium mb-1">After Payment</p>
                 <div className="text-2xl font-mono font-bold text-emerald-400 flex items-baseline justify-end gap-1">
-                  <span className="text-sm opacity-60">₹</span>
-                  {preview.newBalance?.toLocaleString()}
+                  <span className="text-sm opacity-60">$</span>
+                  {calculatePreview().newBalance?.toLocaleString()}
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Transaction Type Toggle */}
+          <div className="bg-slate-800/30 p-1 rounded-xl border border-slate-700 flex">
+            <button
+              type="button"
+              onClick={() => setTransactionType('RECEIPT')}
+              className={`flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                transactionType === 'RECEIPT'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Banknote className="w-4 h-4" />
+              Money Received
+            </button>
+            <button
+              type="button"
+              onClick={() => setTransactionType('PAYOUT')}
+              className={`flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                transactionType === 'PAYOUT'
+                  ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/20'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Landmark className="w-4 h-4" />
+              Money Paid
+            </button>
+          </div>
+          
+          <div className="px-1 text-[10px] text-slate-500 flex justify-between uppercase tracking-wider font-bold">
+            <span>{transactionType === 'RECEIPT' ? '← Increases your cash (Reduces customer debt)' : ''}</span>
+            <span>{transactionType === 'PAYOUT' ? '→ Spending cash (Reduces your debt to them)' : ''}</span>
           </div>
 
           {/* Form */}
@@ -141,27 +147,36 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
             {/* Amount Input */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Payment Amount <span className="text-rose-500">*</span>
+                {transactionType === 'RECEIPT' ? 'Amount Received' : 'Amount Paid'} <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-lg">₹</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-lg">$</span>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  min="1"
-                  max={customer.currentTotalBalance}
+                  min="0.01"
+                  // Max validation removed as we might want to overpay (Credit)
                   step="0.01"
                   required
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white text-lg placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all font-mono"
+                  className={`w-full bg-slate-800 border-2 rounded-xl pl-10 pr-4 py-3 text-white text-lg placeholder-slate-600 focus:outline-none transition-all font-mono ${
+                    transactionType === 'RECEIPT' ? 'border-slate-700 focus:border-emerald-500' : 'border-slate-700 focus:border-amber-500'
+                  }`}
                 />
               </div>
-              {amount > customer.currentTotalBalance && (
-                <p className="text-rose-400 text-sm mt-2 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  Amount cannot exceed total balance
-                </p>
+              
+              {/* Preview Balance Impact */}
+              {amount && parseFloat(amount) > 0 && (
+                 <div className="mt-3 bg-slate-800/50 p-3 rounded-lg flex justify-between items-center text-sm border border-slate-700/50">
+                    <span className="text-slate-400">New Balance Estimate:</span>
+                    <span className={`font-mono font-bold ${calculatePreview().newBalance < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        ${Math.abs(calculatePreview().newBalance).toLocaleString()}
+                        <span className="text-xs opacity-60 ml-1">
+                            {calculatePreview().newBalance < 0 ? '(Payable)' : '(Receivable)'}
+                        </span>
+                    </span>
+                 </div>
               )}
             </div>
 
@@ -214,35 +229,7 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
           </form>
 
           {/* Unpaid Sales Info */}
-          {unpaidSales.length > 0 && (
-            <div className="bg-slate-800/30 rounded-xl border border-slate-800 p-4">
-              <h4 className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
-                <Info className="w-4 h-4" />
-                Oldest Unpaid Sales (FIFO)
-              </h4>
-              <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2">
-                {unpaidSales.map((sale) => (
-                  <div key={sale.saleId} className="flex justify-between items-center text-sm p-2 rounded hover:bg-slate-800 transition-colors">
-                    <div>
-                      <span className="text-slate-300">
-                        {new Date(sale.createdAt).toLocaleDateString()}
-                      </span>
-                      <span className="text-slate-500 mx-2">•</span>
-                      <span className="text-violet-400 font-medium">#{sale.saleId.substring(0, 8)}</span>
-                    </div>
-                    <div className="text-slate-300 font-mono">
-                      Bal: ₹{sale.remainingBalance}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {preview?.affectedSalesCount > 0 && (
-                <div className="mt-3 text-xs text-emerald-400 text-right font-medium">
-                  This payment will update {preview.affectedSalesCount} oldest sale(s)
-                </div>
-              )}
-            </div>
-          )}
+
 
           {error && (
             <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
@@ -265,7 +252,7 @@ const SettleBalanceModal = ({ customer, onClose, onSuccess }) => {
           <button
             type="submit"
             form="settle-form"
-            disabled={loading || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > customer.currentTotalBalance}
+            disabled={loading || !amount || parseFloat(amount) <= 0}
             className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-medium shadow-lg shadow-violet-900/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
           >
             {loading ? (
