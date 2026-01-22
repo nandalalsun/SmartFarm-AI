@@ -23,7 +23,7 @@ export default function Customers() {
   });
   const [toast, setToast] = useState({ message: '', type: '' });
   const [profitModalOpen, setProfitModalOpen] = useState(false);
-  const [settleModalOpen, setSettleModalOpen] = useState(false); // New state for settle modal
+  const [settleModalOpen, setSettleModalOpen] = useState(false);
   const [profitData, setProfitData] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [search, setSearch] = useState('');
@@ -48,9 +48,9 @@ export default function Customers() {
   const handleViewProfit = async customer => {
     setSelectedCustomer(customer);
     try {
+      setProfitModalOpen(true);
       const result = await getCustomerProfit(customer.id).unwrap();
       setProfitData(result);
-      setProfitModalOpen(true);
     } catch (err) {
       console.error('Failed to fetch profit', err);
       setToast({ message: 'Failed to fetch profit report', type: 'error' });
@@ -344,10 +344,22 @@ export default function Customers() {
                   +${profitData.deliveriesValue}
                 </span>
               </div>
+              <div className="bg-slate-800/50 p-3 rounded-lg flex justify-between items-center text-sm">
+                <span className="text-slate-400">Gross Earnings</span>
+                <span className="text-white font-mono">
+                  ${profitData.grossProfit}
+                </span>
+              </div>
+              <div className="bg-slate-800 p-4 rounded-lg flex justify-between items-center">
+                <span className="text-slate-300">Settled Amount</span>
+                <span className="text-orange-400 font-mono font-medium">
+                  -${profitData.settledAmount || 0}
+                </span>
+              </div>
               <div className="border-t border-slate-700 pt-4 flex justify-between items-center">
-                <span className="text-white font-bold">Net Profit</span>
+                <span className="text-white font-bold">Net Payable</span>
                 <span
-                  className={`font-mono font-bold text-xl ${profitData.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+                  className={`font-mono font-bold text-xl ${profitData.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}
                 >
                   ${profitData.profit}
                 </span>

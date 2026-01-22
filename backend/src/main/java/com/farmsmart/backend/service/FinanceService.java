@@ -6,6 +6,7 @@ import com.farmsmart.backend.exception.*;
 import com.farmsmart.backend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import lombok.NonNull;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -25,7 +26,6 @@ public class FinanceService {
     private PurchaseRepository purchaseRepository;
     private CreditLedgerRepository creditLedgerRepository;
     private PaymentTransactionRepository paymentTransactionRepository;
-    private ExpenseRepository expenseRepository;
     private UnifiedTransactionMapper mapper;
 
     @Transactional
@@ -151,6 +151,8 @@ public class FinanceService {
         txn.setCustomer(customer);
         txn.setAmountPaid(request.getInitialPaidAmount());
         txn.setPaymentMethod(request.getPaymentMethod());
+        txn.setTransactionType("RECEIPT"); // Sales are receipts (they pay us)
+        paymentTransactionRepository.save(txn);
     }
 
     private void createCreditLedgerIfNeeded(Sale sale, Customer customer) {
@@ -269,42 +271,45 @@ public class FinanceService {
         txn.setPurchase(purchase);
         txn.setCustomer(purchase.getCustomer());
         txn.setAmountPaid(purchase.getInitialPaidAmount());
-        txn.setPaymentMethod(
-                request.getPaymentMethod() != null ? request.getPaymentMethod() : "CASH"
-        );
+        txn.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "CASH");
+        txn.setTransactionType("PAYOUT"); // Purchases from farmers are payouts (we pay them)
         paymentTransactionRepository.save(txn);
     }
 
 
-    public Map<String, Object> getFarmerProfit(java.util.UUID customerId) {
-        // Simple calculation: Total Delivery Value - Total Input Debt
-        // But actually, we already track net balance. 
-        // Profit = Deliveries (Purchases) - Inputs (Sales)
-        // But inputs might be paid or unpaid.
-        
-        // Let's aggregate from history?
-        List<Purchase> deliveries = purchaseRepository.findAll().stream()
-                .filter(p -> p.getCustomer() != null && p.getCustomer().getId().equals(customerId))
-                .toList();
-                
-        List<Sale> inputs = saleRepository.findAll().stream()
-                .filter(s -> s.getCustomer().getId().equals(customerId))
-                .toList();
-                
+    public Map<String, Object> getFarmerProfit(UUID customerId) {
+        List<Purchase> deliveries = purchaseRepository.findByCustomerId(customerId);
+        List<Sale> inputs = saleRepository.findByCustomerId(customerId);
+        List<PaymentTransaction> transactions = paymentTransactionRepository.findByCustomerId(customerId);
+
         BigDecimal deliveriesValue = deliveries.stream()
                 .map(Purchase::getTotalCost)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-                
+
         BigDecimal inputsCost = inputs.stream()
                 .map(Sale::getTotalBillAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-                
-        BigDecimal profit = deliveriesValue.subtract(inputsCost);
-        
+
+        BigDecimal totalPayouts = transactions.stream()
+                .filter(t -> "PAYOUT".equalsIgnoreCase(t.getTransactionType()))
+                .map(PaymentTransaction::getAmountPaid)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalReceipts = transactions.stream()
+                .filter(t -> "RECEIPT".equalsIgnoreCase(t.getTransactionType()))
+                .map(PaymentTransaction::getAmountPaid)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal netSettled = totalPayouts.subtract(totalReceipts);
+        BigDecimal grossProfit = deliveriesValue.subtract(inputsCost);
+        BigDecimal netOutstanding = grossProfit.subtract(netSettled);
+
         return Map.of(
             "inputsCost", inputsCost,
             "deliveriesValue", deliveriesValue,
-            "profit", profit
+            "settledAmount", netSettled,
+            "profit", netOutstanding,
+            "grossProfit", grossProfit
         );
     }
 
@@ -317,40 +322,17 @@ public class FinanceService {
     }
 
     private SaleHistoryDTO mapToSaleHistoryDTO(Sale sale) {
-        SaleHistoryDTO dto = new SaleHistoryDTO();
-        dto.setId(sale.getId());
-        dto.setDate(sale.getCreatedAt());
-        dto.setCustomerName(sale.getCustomer().getName());
-        dto.setTotalBillAmount(sale.getTotalBillAmount());
-        dto.setInitialPaidAmount(sale.getInitialPaidAmount());
-        dto.setRemainingBalance(sale.getRemainingBalance());
-        dto.setPaymentStatus(sale.getPaymentStatus());
-
-        // Map Items
-        List<SaleHistoryItemDTO> items = sale.getItems().stream().map(item -> {
-            SaleHistoryItemDTO itemDTO = new SaleHistoryItemDTO();
-            itemDTO.setProductName(item.getProduct().getName());
-            itemDTO.setQuantity(item.getQuantity());
-            itemDTO.setUnitPrice(item.getUnitPrice());
-            itemDTO.setLineTotal(item.getLineTotal());
-            return itemDTO;
-        }).toList();
-        dto.setItems(items);
-
-        // Map Payments
-        List<PaymentHistoryDTO> payments = new ArrayList<>();
-        if (sale.getPaymentTransactions() != null) {
-            payments = sale.getPaymentTransactions().stream().map(txn -> {
-                PaymentHistoryDTO txnDTO = new PaymentHistoryDTO();
-                txnDTO.setPaymentDate(txn.getPaymentDate());
-                txnDTO.setAmountPaid(txn.getAmountPaid());
-                txnDTO.setPaymentMethod(txn.getPaymentMethod());
-                return txnDTO;
-            }).toList();
-        }
-        dto.setPaymentHistory(payments);
-
-        return dto;
+        return SaleHistoryDTO.builder()
+                .id(sale.getId())
+                .date(sale.getCreatedAt())
+                .customerName(sale.getCustomer().getName())
+                .totalBillAmount(sale.getTotalBillAmount())
+                .initialPaidAmount(sale.getInitialPaidAmount())
+                .remainingBalance(sale.getRemainingBalance())
+                .paymentStatus(sale.getPaymentStatus())
+                .items(sale.getItems().stream().map(SaleHistoryItemDTO::new).toList())
+                .paymentHistory(sale.getPaymentTransactions().stream().map(PaymentHistoryDTO::new).toList())
+                .build();
     }
 
     private PurchaseHistoryDTO mapToPurchaseHistoryDTO(Purchase purchase) {
@@ -370,36 +352,6 @@ public class FinanceService {
         dto.setInitialPaidAmount(purchase.getInitialPaidAmount());
         dto.setRemainingBalance(purchase.getRemainingBalance());
         return dto;
-    }
-
-    public Map<String, Object> getProfitReport() {
-        List<Sale> sales = saleRepository.findAll();
-        List<Purchase> purchases = purchaseRepository.findAll();
-        List<Expense> expenses = expenseRepository.findAll();
-
-        BigDecimal totalRevenue = sales.stream()
-                .map(Sale::getTotalBillAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalPurchaseCost = purchases.stream()
-                .map(Purchase::getTotalCost)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalOtherExpenses = expenses.stream()
-                .map(Expense::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalExpenses = totalPurchaseCost.add(totalOtherExpenses);
-
-        BigDecimal netProfit = totalRevenue.subtract(totalExpenses);
-
-        return Map.of(
-                "totalRevenue", totalRevenue,
-                "totalExpenses", totalExpenses,
-                "netProfit", netProfit,
-                "purchaseCost", totalPurchaseCost,
-                "otherExpenses", totalOtherExpenses
-        );
     }
 
     public List<UnifiedTransactionDTO> getUnifiedTransactions(TransactionFilterDTO filter) {

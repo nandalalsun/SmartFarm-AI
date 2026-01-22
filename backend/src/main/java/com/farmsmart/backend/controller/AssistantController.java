@@ -2,6 +2,7 @@ package com.farmsmart.backend.controller;
 
 import com.farmsmart.backend.service.DocumentIngestionService;
 import com.farmsmart.backend.service.FarmAssistantService;
+import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -12,15 +13,11 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/assistant")
+@AllArgsConstructor
 public class AssistantController {
 
     private final FarmAssistantService assistantService;
     private final DocumentIngestionService ingestionService;
-
-    public AssistantController(FarmAssistantService assistantService, DocumentIngestionService ingestionService) {
-        this.assistantService = assistantService;
-        this.ingestionService = ingestionService;
-    }
 
     @PostMapping("/chat")
     public ResponseEntity<Map<String, String>> chat(@RequestBody Map<String, String> request) {

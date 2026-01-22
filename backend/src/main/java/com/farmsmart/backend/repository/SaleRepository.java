@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public interface SaleRepository extends JpaRepository<Sale, UUID>, JpaSpecificationExecutor<Sale> {
     List<Sale> findByCustomerIdAndPaymentStatusInOrderByCreatedAtAsc(UUID customerId, List<String> statuses);
+    List<Sale> findByCustomerId(UUID customerId);
     
     // Specification executor handles dynamic filtering now
 }

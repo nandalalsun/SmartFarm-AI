@@ -5,16 +5,16 @@ import com.farmsmart.backend.dto.TransactionReportDTO;
 import com.farmsmart.backend.entity.Sale;
 import com.farmsmart.backend.repository.SaleRepository;
 import com.farmsmart.backend.repository.SaleSpecification;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 @Service
+@AllArgsConstructor
 public class ReportService {
 
-    @Autowired
     private SaleRepository saleRepository;
 
     public TransactionReportDTO generateTransactionReport(TransactionFilterDTO filter) {

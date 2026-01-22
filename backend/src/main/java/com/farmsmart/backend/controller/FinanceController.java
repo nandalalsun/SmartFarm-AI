@@ -39,12 +39,6 @@ public class FinanceController {
         return ResponseEntity.ok(paymentSettlementService.getUnpaidSalesForCustomer(customerId));
     }
 
-    @GetMapping("/report")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'ACCOUNTANT')")
-    public Map<String, Object> getReport() {
-        return financeService.getProfitReport();
-    }
-
     @GetMapping("/transactions")
     @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'ACCOUNTANT')")
     public ResponseEntity<TransactionReportDTO> getTransactionReport(

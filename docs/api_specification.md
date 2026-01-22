@@ -125,7 +125,6 @@ Financial reporting and transaction ledgers.
 
 | Method | Path | Description | Access |
 |:-------|:-----|:------------|:-------|
-| `GET` | `/finance/report` | Get profit/loss summary report. | Authenticated |
 | `GET` | `/finance/transactions` | Get detailed transaction report with filters. | Authenticated |
 | `GET` | `/finance/ledger` | Get unified ledger (sales + payments + purchases) with filters. | Authenticated |
 

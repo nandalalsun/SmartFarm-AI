@@ -6,6 +6,7 @@ import com.farmsmart.backend.entity.StockAdjustment;
 import com.farmsmart.backend.repository.ProductRepository;
 import com.farmsmart.backend.repository.StockAdjustmentRepository;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -15,11 +16,10 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.CacheEvict;
 
 @Service
+@AllArgsConstructor
 public class ProductService {
-    @Autowired
-    private ProductRepository repository;
 
-    @Autowired
+    private ProductRepository repository;
     private StockAdjustmentRepository stockAdjustmentRepository;
 
     @Cacheable(value = "products")
